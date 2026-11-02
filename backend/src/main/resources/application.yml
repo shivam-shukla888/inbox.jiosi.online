@@ -55,5 +55,8 @@ logging:
 
 app:
   version: 0.1.0-alpha
+  security:
+    enabled: ${SECURITY_ENABLED:true}
+    jwt-secret: ${JWT_SECRET:jiosi_default_development_hmac_secret_key_minimum_32_bytes_long}
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,https://inbox.jiosi.online}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,http://localhost:80,https://inbox.jiosi.online}

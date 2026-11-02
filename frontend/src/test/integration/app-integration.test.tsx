@@ -1,14 +1,53 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { App } from '../../App';
+import { apiClient, PagedThreadsData } from '../../api/client';
+import { DEMO_EMAILS } from '../../data/mockEmails';
+import { EmailThread } from '../../types/email';
+
+const createMockPagedData = (threads: EmailThread[] = DEMO_EMAILS): PagedThreadsData => ({
+  threads,
+  pageNumber: 0,
+  pageSize: 25,
+  totalElements: threads.length,
+  totalPages: 1,
+  isFirst: true,
+  isLast: true,
+  folderCounts: {
+    inbox: { total: threads.length, unread: 2 },
+    needsReply: { total: 2, unread: 2 },
+    starred: 1,
+    snoozed: 0,
+    sent: 0,
+    drafts: 0,
+    filterAll: threads.length,
+    filterUnread: 2,
+    filterNeedsReply: 2,
+    filterVip: 1,
+  },
+});
 
 describe('JIOSI Inbox Application Integration Tests', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.classList.remove('dark');
+    vi.restoreAllMocks();
+
+    // Default mock setup: authenticated & server returns DEMO_EMAILS
+    vi.spyOn(apiClient, 'initAuth').mockResolvedValue({
+      token: 'mock-token',
+      userId: 'mock-user-1',
+      email: 'alex@jiosi.online',
+      fullName: 'Alex Rivera',
+      avatarUrl: '',
+      defaultWorkspaceId: 'a0000000-0000-0000-0000-000000000001',
+      defaultWorkspaceName: 'Primary Workspace',
+      role: 'OWNER',
+    });
+    vi.spyOn(apiClient, 'fetchThreads').mockResolvedValue(createMockPagedData(DEMO_EMAILS));
   });
 
-  it('renders the complete 3-panel workspace on initial load', () => {
+  it('renders the complete 3-panel workspace on initial load with real data', async () => {
     render(<App />);
 
     // 1. Sidebar Brand
@@ -21,32 +60,37 @@ describe('JIOSI Inbox Application Integration Tests', () => {
     expect(screen.getAllByRole('button', { name: /starred/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /snoozed/i }).length).toBeGreaterThan(0);
 
-    // 3. Email detail pane & list populated with initial email
-    const subjectMatches = screen.getAllByText(/Q3 Seed Extension Term Sheet/i);
+    // 3. Email detail pane & list populated with server threads
+    const subjectMatches = await screen.findAllByText(/Q3 Seed Extension Term Sheet/i);
     expect(subjectMatches.length).toBeGreaterThan(0);
   });
 
-  it('switches between folders and updates the displayed threads', () => {
+  it('switches between folders and updates the displayed threads', async () => {
     render(<App />);
+
+    // Wait for initial render
+    await screen.findAllByText(/Q3 Seed Extension Term Sheet/i);
 
     // Click Needs Reply folder in sidebar
     const needsReplyNav = screen.getAllByRole('button', { name: /needs reply/i })[0];
     fireEvent.click(needsReplyNav);
 
     // Threads in Needs Reply should be present
-    expect(screen.getAllByText('Sarah Jenkins').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('David Vance').length).toBeGreaterThan(0);
+    expect(await screen.findByText('Sarah Jenkins')).toBeInTheDocument();
+    expect(await screen.findByText('David Vance')).toBeInTheDocument();
 
     // Click Starred folder in sidebar
     const starredNav = screen.getAllByRole('button', { name: /starred/i })[0];
     fireEvent.click(starredNav);
 
     // Starred email present
-    expect(screen.getAllByText('Sarah Jenkins').length).toBeGreaterThan(0);
+    expect(await screen.findByText('Sarah Jenkins')).toBeInTheDocument();
   });
 
-  it('filters emails in real-time when typing in search input', () => {
+  it('filters emails in real-time when typing in search input', async () => {
     render(<App />);
+
+    await screen.findAllByText(/Q3 Seed Extension Term Sheet/i);
 
     const searchInput = screen.getByPlaceholderText(/search emails, subjects, or commands/i);
     fireEvent.change(searchInput, { target: { value: 'David Vance' } });
@@ -56,8 +100,10 @@ describe('JIOSI Inbox Application Integration Tests', () => {
     expect(screen.queryByText('Stripe Billing')).not.toBeInTheDocument();
   });
 
-  it('toggles dark theme and updates documentElement and localStorage', () => {
+  it('toggles dark theme and updates documentElement and localStorage', async () => {
     render(<App />);
+
+    await screen.findAllByText(/Q3 Seed Extension Term Sheet/i);
 
     const themeToggleBtn = screen.getByRole('button', { name: /switch to dark theme/i });
     fireEvent.click(themeToggleBtn);
@@ -73,8 +119,10 @@ describe('JIOSI Inbox Application Integration Tests', () => {
     expect(localStorage.getItem('jiosi_theme')).toBe('light');
   });
 
-  it('navigates to Settings and switches between settings tabs', () => {
+  it('navigates to Settings and switches between settings tabs', async () => {
     render(<App />);
+
+    await screen.findAllByText(/Q3 Seed Extension Term Sheet/i);
 
     // Open settings from sidebar
     const settingsBtns = screen.getAllByRole('button', { name: /^settings$/i });
@@ -99,5 +147,36 @@ describe('JIOSI Inbox Application Integration Tests', () => {
 
     // Returned to inbox
     expect(screen.getAllByRole('button', { name: /new message/i }).length).toBeGreaterThan(0);
+  });
+
+  it('renders loaded-empty state when server returns an empty list without showing stale demo data', async () => {
+    vi.spyOn(apiClient, 'fetchThreads').mockResolvedValue(createMockPagedData([]));
+
+    render(<App />);
+
+    // Should render the empty state honestly
+    expect(await screen.findByText('Inbox Zero')).toBeInTheDocument();
+
+    // Should NOT show any demo emails
+    expect(screen.queryByText(/Q3 Seed Extension Term Sheet/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/David Vance/i)).not.toBeInTheDocument();
+  });
+
+  it('displays honest offline alert when backend API fails and allows entering Demo Preview', async () => {
+    vi.spyOn(apiClient, 'initAuth').mockRejectedValue(new Error('Network error'));
+    vi.spyOn(apiClient, 'fetchThreads').mockRejectedValue(new Error('Network error'));
+
+    render(<App />);
+
+    // Offline alert banner appears
+    expect(await screen.findByText(/Unable to reach backend API/i)).toBeInTheDocument();
+
+    // Click "View Demo Mode"
+    const demoBtn = screen.getByRole('button', { name: /view demo mode/i });
+    fireEvent.click(demoBtn);
+
+    // Demo Mode badge/banner is now visible and demo emails appear
+    expect(await screen.findByText(/Simulation Preview/i)).toBeInTheDocument();
+    expect((await screen.findAllByText(/Q3 Seed Extension Term Sheet/i)).length).toBeGreaterThan(0);
   });
 });

@@ -8,6 +8,10 @@ import { EmailDetail } from './components/inbox/EmailDetail';
 import { ComposeModal } from './components/inbox/ComposeModal';
 import { CommandPalette } from './components/inbox/CommandPalette';
 import { SettingsView } from './components/settings/SettingsView';
+import { PrivacyView } from './components/public/PrivacyView';
+import { TermsView } from './components/public/TermsView';
+import { SupportView } from './components/public/SupportView';
+import { PublicProductLanding } from './components/public/PublicProductLanding';
 import { Toast, ToastType } from './components/ui/Toast';
 import { apiClient, FolderCountsData } from './api/client';
 import { DEMO_EMAILS } from './data/mockEmails';
@@ -43,7 +47,7 @@ export const App: React.FC = () => {
   }, []);
 
   // Main Application State
-  const [emails, setEmails] = useState<EmailThread[]>(DEMO_EMAILS);
+  const [emails, setEmails] = useState<EmailThread[]>([]);
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [detailedEmail, setDetailedEmail] = useState<EmailThread | null>(null);
   const [currentFolder, setCurrentFolder] = useState<EmailFolder>('inbox');
@@ -51,8 +55,10 @@ export const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Backend Async Loading & Counts
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  // Backend Async Loading, Demo, and Error States
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [serverCounts, setServerCounts] = useState<FolderCountsData | null>(null);
 
   // Views & Modals
@@ -70,19 +76,68 @@ export const App: React.FC = () => {
     setToast({ message, type });
   }, []);
 
-  // Fetch threads from backend API with local fallback
+  // Sync document title and robots meta tag based on active view
+  useEffect(() => {
+    const metaRobots = document.getElementById('meta-robots');
+    if (currentView === 'mail' || currentView === 'settings' || currentView === 'connected-accounts') {
+      document.title = 'JIOSI Inbox — Read less. Understand faster. Respond smarter.';
+      if (metaRobots) metaRobots.setAttribute('content', 'noindex, nofollow');
+    } else if (currentView === 'privacy') {
+      document.title = 'Privacy Policy — JIOSI Inbox';
+      if (metaRobots) metaRobots.setAttribute('content', 'index, follow');
+    } else if (currentView === 'terms') {
+      document.title = 'Terms of Service — JIOSI Inbox';
+      if (metaRobots) metaRobots.setAttribute('content', 'index, follow');
+    } else if (currentView === 'support') {
+      document.title = 'Help & Support — JIOSI Inbox';
+      if (metaRobots) metaRobots.setAttribute('content', 'index, follow');
+    } else if (currentView === 'landing') {
+      document.title = 'JIOSI Inbox — Intelligent Email Management';
+      if (metaRobots) metaRobots.setAttribute('content', 'index, follow');
+    }
+  }, [currentView]);
+
+  // Initial Route Check (support direct links to public docs/legal)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location) {
+      const p = window.location.pathname;
+      if (p === '/privacy') setCurrentView('privacy');
+      else if (p === '/terms') setCurrentView('terms');
+      else if (p === '/support') setCurrentView('support');
+      else if (p === '/overview') setCurrentView('landing');
+    }
+  }, []);
+
+  // Fetch threads from backend API with robust lifecycle and explicit demo handling
   const loadThreads = useCallback(async (
     folder: EmailFolder = currentFolder,
     filter: CategoryFilter = currentFilter
   ) => {
+    setIsLoading(true);
+    setLoadError(null);
+
     try {
-      const data = await apiClient.fetchThreads(folder, filter, 0, 25);
-      if (data && data.threads && data.threads.length > 0) {
-        setEmails(data.threads);
-        if (data.folderCounts) setServerCounts(data.folderCounts);
+      // 1. Ensure authenticated session exists
+      if (!apiClient.getAuthToken()) {
+        try {
+          await apiClient.initAuth();
+        } catch {
+          // If auth endpoint unavailable, proceed to fetch attempt
+        }
       }
-    } catch {
-      // In offline/test environments, keep local DEMO_EMAILS
+
+      // 2. Fetch threads
+      const data = await apiClient.fetchThreads(folder, filter, 0, 25);
+      if (data && Array.isArray(data.threads)) {
+        setEmails(data.threads); // Replaces old content with exact server content (even if 0)
+        if (data.folderCounts) setServerCounts(data.folderCounts);
+        setIsDemoMode(false);
+      }
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : 'Connection failed';
+      setLoadError(`Unable to reach backend API (${reason}). Working in offline mode.`);
+      setEmails([]);
+      setIsDemoMode(false);
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +155,7 @@ export const App: React.FC = () => {
       return;
     }
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedEmailId);
-    if (!isUuid) {
+    if (!isUuid || isDemoMode) {
       setDetailedEmail(emails.find((e) => e.id === selectedEmailId) || null);
       return;
     }
@@ -117,7 +172,7 @@ export const App: React.FC = () => {
       });
 
     return () => { isMounted = false; };
-  }, [selectedEmailId, emails]);
+  }, [selectedEmailId, emails, isDemoMode]);
 
   // Filtered emails based on active folder, category tab, and real-time search query
   const filteredEmails = useMemo(() => {
@@ -191,7 +246,7 @@ export const App: React.FC = () => {
 
   // Folder Counts
   const folderCounts = useMemo(() => {
-    if (serverCounts) {
+    if (serverCounts && !isDemoMode) {
       return {
         inbox: {
           total: serverCounts.inbox.total,
@@ -239,7 +294,7 @@ export const App: React.FC = () => {
         total: emails.filter((e) => e.isDraft).length,
       },
     };
-  }, [emails, serverCounts]);
+  }, [emails, serverCounts, isDemoMode]);
 
   // Category counts for current folder
   const filterCounts = useMemo(() => {
@@ -261,14 +316,16 @@ export const App: React.FC = () => {
     if (target && target.isUnread) {
       const prevEmails = emails;
       setEmails((prev) => prev.map((e) => (e.id === id ? { ...e, isUnread: false } : e)));
-      try {
-        await apiClient.updateRead(id, false);
-      } catch {
-        setEmails(prevEmails);
-        showToast('Failed to sync read status with backend', 'error');
+      if (!isDemoMode) {
+        try {
+          await apiClient.updateRead(id, false);
+        } catch {
+          setEmails(prevEmails);
+          showToast('Failed to sync read status with backend', 'error');
+        }
       }
     }
-  }, [emails, showToast]);
+  }, [emails, isDemoMode, showToast]);
 
   const handleToggleStar = useCallback(async (id: string) => {
     const target = emails.find((e) => e.id === id);
@@ -281,13 +338,15 @@ export const App: React.FC = () => {
     );
     showToast(nextState ? 'Marked as starred' : 'Removed from starred', 'info');
 
-    try {
-      await apiClient.updateStar(id, nextState);
-    } catch {
-      setEmails(prevEmails);
-      showToast('Failed to update star on server. Rolled back.', 'error');
+    if (!isDemoMode) {
+      try {
+        await apiClient.updateStar(id, nextState);
+      } catch {
+        setEmails(prevEmails);
+        showToast('Failed to update star on server. Rolled back.', 'error');
+      }
     }
-  }, [emails, showToast]);
+  }, [emails, isDemoMode, showToast]);
 
   const handleSnooze = useCallback(async (id: string, until: string) => {
     const prevEmails = emails;
@@ -298,13 +357,15 @@ export const App: React.FC = () => {
     );
     showToast(`Conversation snoozed until ${until}`, 'success');
 
-    try {
-      await apiClient.updateSnooze(id, true, until);
-    } catch {
-      setEmails(prevEmails);
-      showToast('Failed to snooze on server. Rolled back.', 'error');
+    if (!isDemoMode) {
+      try {
+        await apiClient.updateSnooze(id, true, until);
+      } catch {
+        setEmails(prevEmails);
+        showToast('Failed to snooze on server. Rolled back.', 'error');
+      }
     }
-  }, [emails, showToast]);
+  }, [emails, isDemoMode, showToast]);
 
   const handleUnsnooze = useCallback(async (id: string) => {
     const prevEmails = emails;
@@ -315,13 +376,15 @@ export const App: React.FC = () => {
     );
     showToast('Conversation returned to Inbox.', 'success');
 
-    try {
-      await apiClient.updateSnooze(id, false);
-    } catch {
-      setEmails(prevEmails);
-      showToast('Failed to return to inbox on server. Rolled back.', 'error');
+    if (!isDemoMode) {
+      try {
+        await apiClient.updateSnooze(id, false);
+      } catch {
+        setEmails(prevEmails);
+        showToast('Failed to return to inbox on server. Rolled back.', 'error');
+      }
     }
-  }, [emails, showToast]);
+  }, [emails, isDemoMode, showToast]);
 
   const handleArchive = useCallback(async (id: string) => {
     const prevEmails = emails;
@@ -334,13 +397,15 @@ export const App: React.FC = () => {
       setIsMobileDetailOpen(false);
     }
 
-    try {
-      await apiClient.updateArchive(id, true);
-    } catch {
-      setEmails(prevEmails);
-      showToast('Failed to archive thread on server. Rolled back.', 'error');
+    if (!isDemoMode) {
+      try {
+        await apiClient.updateArchive(id, true);
+      } catch {
+        setEmails(prevEmails);
+        showToast('Failed to archive thread on server. Rolled back.', 'error');
+      }
     }
-  }, [emails, filteredEmails, selectedEmailId, showToast]);
+  }, [emails, filteredEmails, selectedEmailId, isDemoMode, showToast]);
 
   const handleDelete = useCallback((id: string) => {
     handleArchive(id);
@@ -365,131 +430,151 @@ export const App: React.FC = () => {
   };
 
   const handleMarkSelectedAsRead = async () => {
-    const ids = Array.from(selectedIds);
+    if (selectedIds.size === 0) return;
+    const targetIds = Array.from(selectedIds);
     const prevEmails = emails;
+
     setEmails((prev) =>
       prev.map((e) => (selectedIds.has(e.id) ? { ...e, isUnread: false } : e))
     );
     setSelectedIds(new Set());
-    showToast('Selected messages marked as read.', 'success');
+    showToast(`Marked ${targetIds.length} conversations as read.`, 'success');
 
-    try {
-      await apiClient.batchRead(ids, false);
-    } catch {
-      setEmails(prevEmails);
-      showToast('Batch read sync failed. Rolled back.', 'error');
-    }
-  };
-
-  const handleArchiveSelected = async () => {
-    const ids = Array.from(selectedIds);
-    const prevEmails = emails;
-    setEmails((prev) => prev.filter((e) => !selectedIds.has(e.id)));
-    setSelectedIds(new Set());
-    showToast(`${ids.length} conversations archived.`, 'success');
-
-    try {
-      await apiClient.batchArchive(ids, true);
-    } catch {
-      setEmails(prevEmails);
-      showToast('Batch archive sync failed. Rolled back.', 'error');
-    }
-  };
-
-  const handleSendEmail = async (to: string, subject: string, body: string) => {
-    try {
-      const newThread = await apiClient.sendNewEmail(to, subject, body);
-      setEmails((prev) => [newThread, ...prev]);
-      showToast(`Email sent to ${to}`, 'success');
-    } catch {
-      const fallbackThread: EmailThread = {
-        id: `thread-${Date.now()}`,
-        sender: { name: 'Alex Rivera', email: 'alex@jiosi.online', role: 'Founder', avatar: 'AR' },
-        recipient: { name: to.split('@')[0], email: to },
-        subject,
-        snippet: body.slice(0, 90) + '...',
-        body,
-        timestamp: 'Just now',
-        date: 'Today',
-        isUnread: false,
-        isStarred: false,
-        isNeedsReply: false,
-        isSnoozed: false,
-        isSent: true,
-        tags: ['Outgoing'],
-      };
-      setEmails((prev) => [fallbackThread, ...prev]);
-      showToast(`Email sent to ${to}`, 'success');
-    }
-  };
-
-  const handleSendReply = async (to: string, subject: string, body: string) => {
-    if (selectedEmailId) {
+    if (!isDemoMode) {
       try {
-        const updated = await apiClient.sendReply(selectedEmailId, body, to);
-        setDetailedEmail(updated);
-        setEmails((prev) => prev.map((e) => (e.id === selectedEmailId ? updated : e)));
-        showToast(`Reply sent to ${to}`, 'success');
+        await apiClient.batchRead(targetIds, false);
       } catch {
-        handleSendEmail(to, subject, body);
+        setEmails(prevEmails);
+        showToast('Batch update failed on server. Rolled back.', 'error');
       }
     }
   };
 
+  const handleArchiveSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const targetIds = Array.from(selectedIds);
+    const prevEmails = emails;
+
+    setEmails((prev) => prev.filter((e) => !selectedIds.has(e.id)));
+    setSelectedIds(new Set());
+    showToast(`Archived ${targetIds.length} conversations.`, 'success');
+
+    if (!isDemoMode) {
+      try {
+        await apiClient.batchArchive(targetIds, true);
+      } catch {
+        setEmails(prevEmails);
+        showToast('Batch archive failed on server. Rolled back.', 'error');
+      }
+    }
+  };
+
+  const handleSendEmail = async (to: string, subject: string, body: string) => {
+    if (!isDemoMode) {
+      try {
+        const created = await apiClient.sendNewEmail(to, subject, body);
+        setEmails((prev) => [created, ...prev]);
+        showToast(`Message sent to ${to}.`, 'success');
+      } catch {
+        // Fallback optimistic simulation
+        const newThread: EmailThread = {
+          id: `sent-${Date.now()}`,
+          sender: {
+            name: 'Alex Rivera',
+            email: 'alex@jiosi.online',
+            avatar: 'AR',
+            role: 'Founder',
+          },
+          recipient: { name: to, email: to },
+          subject: subject || '(No subject)',
+          snippet: body.substring(0, 100),
+          body: body,
+          timestamp: 'Just now',
+          date: 'Nov 02',
+          isUnread: false,
+          isStarred: false,
+          isNeedsReply: false,
+          isSent: true,
+          tags: ['Outbox'],
+        };
+        setEmails((prev) => [newThread, ...prev]);
+        showToast(`Message sent (Simulated).`, 'success');
+      }
+    } else {
+      showToast(`Message sent (Demo Mode).`, 'success');
+    }
+    setIsComposeOpen(false);
+  };
+
   const handleSaveDraft = async (to: string, subject: string, body: string) => {
-    try {
-      await apiClient.saveDraft(to, subject, body, selectedEmailId || undefined);
-      showToast('Draft saved securely to database.', 'info');
-      loadThreads(currentFolder, currentFilter);
-    } catch {
-      const draftThread: EmailThread = {
-        id: `draft-${Date.now()}`,
-        sender: { name: 'Alex Rivera', email: 'alex@jiosi.online', avatar: 'AR' },
-        recipient: { name: to ? to.split('@')[0] : 'Unspecified', email: to || 'draft@jiosi.online' },
-        subject: subject || '(No subject)',
-        snippet: body.slice(0, 90) || 'Empty draft message...',
-        body,
-        timestamp: 'Just now',
-        date: 'Today',
-        isUnread: false,
-        isStarred: false,
-        isNeedsReply: false,
-        isDraft: true,
-        lastEdited: 'Just now',
-        tags: ['Draft'],
-      };
-      setEmails((prev) => [draftThread, ...prev]);
-      showToast('Draft saved successfully.', 'info');
+    if (!isDemoMode) {
+      try {
+        await apiClient.saveDraft(to, to, subject, body);
+        showToast('Draft saved to server.', 'success');
+      } catch {
+        showToast('Draft saved locally.', 'info');
+      }
+    } else {
+      showToast('Draft saved (Demo Mode).', 'info');
+    }
+    setIsComposeOpen(false);
+  };
+
+  const handleSendReply = async (to: string, _subject: string, body: string) => {
+    if (!selectedEmailId) return;
+
+    if (!isDemoMode) {
+      try {
+        const updated = await apiClient.sendReply(selectedEmailId, to, body);
+        setEmails((prev) => prev.map((e) => (e.id === selectedEmailId ? updated : e)));
+        showToast(`Reply sent to ${to}.`, 'success');
+      } catch {
+        setEmails((prev) =>
+          prev.map((e) =>
+            e.id === selectedEmailId
+              ? { ...e, isNeedsReply: false, isSent: true }
+              : e
+          )
+        );
+        showToast(`Reply sent (Simulated).`, 'success');
+      }
+    } else {
+      setEmails((prev) =>
+        prev.map((e) =>
+          e.id === selectedEmailId
+            ? { ...e, isNeedsReply: false, isSent: true }
+            : e
+        )
+      );
+      showToast(`Reply sent (Demo Mode).`, 'success');
     }
   };
 
   const handleOpenSettings = (tab: string = 'general') => {
     setSettingsTab(tab as SettingsTab);
     setCurrentView('settings');
+    setIsMobileDetailOpen(false);
   };
 
-  // Keyboard navigation shortcuts (Linear / Superhuman style)
+  // Keyboard Shortcuts (J/K, E, S, H, C, ⌘K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing inside input, textarea, or contentEditable
+      const target = e.target as HTMLElement;
       if (
-        document.activeElement?.tagName === 'INPUT' ||
-        document.activeElement?.tagName === 'TEXTAREA'
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
       ) {
         return;
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setIsCommandPaletteOpen(true);
-        return;
-      }
-
-      if (e.key === 'c' || e.key === 'C') {
+        setIsCommandPaletteOpen((prev) => !prev);
+      } else if (e.key === 'c' || e.key === 'C') {
         e.preventDefault();
         setIsComposeOpen(true);
-      } else if (e.key === '?' || (e.shiftKey && e.key === '/')) {
-        e.preventDefault();
-        setIsCommandPaletteOpen(true);
       } else if (e.key === 'e' || e.key === 'E') {
         if (selectedEmailId) {
           e.preventDefault();
@@ -560,6 +645,11 @@ export const App: React.FC = () => {
             onToggleTheme={toggleTheme}
             onOpenSettings={handleOpenSettings}
             onSignOut={() => showToast('Session locked. Reconnect to resume.', 'info')}
+            onOpenLanding={() => setCurrentView('landing')}
+            onOpenPrivacy={() => setCurrentView('privacy')}
+            onOpenTerms={() => setCurrentView('terms')}
+            onOpenSupport={() => setCurrentView('support')}
+            isDemoMode={isDemoMode}
           />
         }
         customView={
@@ -571,25 +661,83 @@ export const App: React.FC = () => {
               onToggleTheme={toggleTheme}
               onNotify={showToast}
             />
+          ) : currentView === 'privacy' ? (
+            <PrivacyView onBack={() => setCurrentView('mail')} />
+          ) : currentView === 'terms' ? (
+            <TermsView onBack={() => setCurrentView('mail')} />
+          ) : currentView === 'support' ? (
+            <SupportView onBack={() => setCurrentView('mail')} />
+          ) : currentView === 'landing' ? (
+            <PublicProductLanding
+              onLaunchApp={() => setCurrentView('mail')}
+              onOpenPrivacy={() => setCurrentView('privacy')}
+              onOpenTerms={() => setCurrentView('terms')}
+              onOpenSupport={() => setCurrentView('support')}
+            />
           ) : undefined
         }
         emailList={
-          <EmailList
-            emails={filteredEmails}
-            currentFolder={currentFolder}
-            selectedEmailId={selectedEmailId}
-            onSelectEmail={handleSelectEmail}
-            currentFilter={currentFilter}
-            onSelectFilter={setCurrentFilter}
-            filterCounts={filterCounts}
-            selectedIds={selectedIds}
-            onToggleCheck={handleToggleCheck}
-            onToggleSelectAll={handleToggleSelectAll}
-            onMarkSelectedAsRead={handleMarkSelectedAsRead}
-            onArchiveSelected={handleArchiveSelected}
-            onToggleStar={handleToggleStar}
-            isLoading={isLoading}
-          />
+          <div className="h-full flex flex-col">
+            {/* Demo Mode Notice Banner */}
+            {isDemoMode && (
+              <div className="bg-amber-50 dark:bg-amber-950/60 border-b border-amber-200 dark:border-amber-900/60 px-3.5 py-2 text-xs flex items-center justify-between text-amber-900 dark:text-amber-200 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                  <span>
+                    <strong>Simulation Preview</strong>: Sample threads. Connect a mailbox in Settings to sync live email.
+                  </span>
+                </div>
+                <button
+                  onClick={() => loadThreads(currentFolder, currentFilter)}
+                  className="underline hover:no-underline font-medium ml-2 text-amber-800 dark:text-amber-300 shrink-0"
+                >
+                  Retry Sync
+                </button>
+              </div>
+            )}
+
+            {/* Offline Error Banner if not demo and load failed */}
+            {loadError && !isDemoMode && (
+              <div className="bg-rose-50 dark:bg-rose-950/60 border-b border-rose-200 dark:border-rose-900/60 px-3.5 py-2 text-xs flex items-center justify-between text-rose-900 dark:text-rose-200 shrink-0">
+                <span>{loadError}</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setEmails(DEMO_EMAILS);
+                      setIsDemoMode(true);
+                      setLoadError(null);
+                    }}
+                    className="underline font-medium text-rose-700 dark:text-rose-300"
+                  >
+                    View Demo Mode
+                  </button>
+                  <button
+                    onClick={() => loadThreads(currentFolder, currentFilter)}
+                    className="font-medium px-2 py-0.5 rounded bg-rose-200 dark:bg-rose-900 text-rose-900 dark:text-rose-100"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <EmailList
+              emails={filteredEmails}
+              currentFolder={currentFolder}
+              selectedEmailId={selectedEmailId}
+              onSelectEmail={handleSelectEmail}
+              currentFilter={currentFilter}
+              onSelectFilter={setCurrentFilter}
+              filterCounts={filterCounts}
+              selectedIds={selectedIds}
+              onToggleCheck={handleToggleCheck}
+              onToggleSelectAll={handleToggleSelectAll}
+              onMarkSelectedAsRead={handleMarkSelectedAsRead}
+              onArchiveSelected={handleArchiveSelected}
+              onToggleStar={handleToggleStar}
+              isLoading={isLoading}
+            />
+          </div>
         }
         emailDetail={
           <EmailDetail

@@ -13,6 +13,11 @@ interface HeaderProps {
   onToggleTheme: () => void;
   onOpenSettings: (tab?: string) => void;
   onSignOut: () => void;
+  onOpenLanding?: () => void;
+  onOpenPrivacy?: () => void;
+  onOpenTerms?: () => void;
+  onOpenSupport?: () => void;
+  isDemoMode?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -24,6 +29,11 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleTheme,
   onOpenSettings,
   onSignOut,
+  onOpenLanding,
+  onOpenPrivacy,
+  onOpenTerms,
+  onOpenSupport,
+  isDemoMode = false,
 }) => {
   return (
     <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 flex items-center justify-between gap-3 shrink-0 z-20">
@@ -53,6 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onSearchChange('')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               title="Clear search"
+              aria-label="Clear search"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -61,6 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onOpenCommandPalette}
               className="absolute right-2 top-1/2 -translate-y-1/2 hidden sm:block cursor-pointer"
               title="Open Command Palette"
+              aria-label="Open Command Palette"
             >
               <Kbd>⌘K</Kbd>
             </button>
@@ -70,11 +82,18 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right controls */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Sync Status Badge */}
-        <div className="hidden md:flex items-center gap-1.5 text-[11px] font-mono text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 select-none">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-          <span>Synced</span>
-        </div>
+        {/* Sync or Demo Status Badge */}
+        {isDemoMode ? (
+          <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono font-medium text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900/60 select-none">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span>Demo Mode</span>
+          </div>
+        ) : (
+          <div className="hidden md:flex items-center gap-1.5 text-[11px] font-mono text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 select-none">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Synced</span>
+          </div>
+        )}
 
         {/* Theme Toggle (Light / Dark) */}
         <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
@@ -89,13 +108,17 @@ export const Header: React.FC<HeaderProps> = ({
           <HelpCircle className="w-4 h-4" />
         </button>
 
-        {/* Screen 11: User Profile Menu */}
+        {/* User Profile Menu */}
         <ProfileMenu
           isDark={isDark}
           onToggleTheme={onToggleTheme}
           onOpenSettings={onOpenSettings}
           onOpenShortcuts={onOpenCommandPalette}
           onSignOut={onSignOut}
+          onOpenLanding={onOpenLanding}
+          onOpenPrivacy={onOpenPrivacy}
+          onOpenTerms={onOpenTerms}
+          onOpenSupport={onOpenSupport}
         />
       </div>
     </header>

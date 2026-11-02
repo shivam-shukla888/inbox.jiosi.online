@@ -7,7 +7,9 @@ import {
   Sun,
   Moon,
   Shield,
-  ChevronDown
+  ChevronDown,
+  FileText,
+  Compass
 } from 'lucide-react';
 
 interface ProfileMenuProps {
@@ -16,6 +18,10 @@ interface ProfileMenuProps {
   onOpenSettings: (tab?: string) => void;
   onOpenShortcuts: () => void;
   onSignOut: () => void;
+  onOpenLanding?: () => void;
+  onOpenPrivacy?: () => void;
+  onOpenTerms?: () => void;
+  onOpenSupport?: () => void;
 }
 
 export const ProfileMenu: React.FC<ProfileMenuProps> = ({
@@ -24,6 +30,10 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({
   onOpenSettings,
   onOpenShortcuts,
   onSignOut,
+  onOpenLanding,
+  onOpenPrivacy,
+  onOpenTerms,
+  onOpenSupport,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -34,11 +44,18 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({
         setIsOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
 
@@ -62,7 +79,11 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-dropdown z-50 py-1.5 animate-in fade-in-50 zoom-in-95">
+        <div
+          role="menu"
+          aria-label="User profile options"
+          className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-dropdown z-50 py-1.5 animate-in fade-in-50 zoom-in-95"
+        >
           {/* Header Info */}
           <div className="px-3.5 py-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2.5">
@@ -120,6 +141,58 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({
               <HelpCircle className="w-4 h-4 text-slate-400" />
               <span>Keyboard Shortcuts</span>
             </button>
+
+            {onOpenLanding && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenLanding();
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors text-left"
+              >
+                <Compass className="w-4 h-4 text-slate-400" />
+                <span>Product Overview</span>
+              </button>
+            )}
+
+            {onOpenSupport && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenSupport();
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors text-left"
+              >
+                <HelpCircle className="w-4 h-4 text-slate-400" />
+                <span>Help & Support</span>
+              </button>
+            )}
+
+            {onOpenPrivacy && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenPrivacy();
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors text-left"
+              >
+                <Shield className="w-4 h-4 text-slate-400" />
+                <span>Privacy Policy</span>
+              </button>
+            )}
+
+            {onOpenTerms && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenTerms();
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors text-left"
+              >
+                <FileText className="w-4 h-4 text-slate-400" />
+                <span>Terms of Service</span>
+              </button>
+            )}
           </div>
 
           {/* Theme switcher */}

@@ -41,13 +41,29 @@ export interface ApiResponse<T> {
   timestamp: string;
 }
 
+export interface AuthSessionData {
+  token: string;
+  userId: string;
+  email: string;
+  fullName: string;
+  avatarUrl: string;
+  defaultWorkspaceId: string;
+  defaultWorkspaceName: string;
+  role: string;
+}
+
 export class ApiClient {
   private baseUrl: string;
   private workspaceId: string;
+  private authToken: string | null = null;
 
   constructor(baseUrl: string = API_BASE_URL, workspaceId: string = DEFAULT_WORKSPACE_ID) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.workspaceId = workspaceId;
+    // Check if token was saved in localStorage
+    if (typeof window !== 'undefined' && window.localStorage) {
+      this.authToken = localStorage.getItem('jiosi_auth_token');
+    }
   }
 
   getBaseUrl(): string {
@@ -62,12 +78,55 @@ export class ApiClient {
     this.workspaceId = id;
   }
 
+  getAuthToken(): string | null {
+    return this.authToken;
+  }
+
+  setAuthToken(token: string | null) {
+    this.authToken = token;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      if (token) {
+        localStorage.setItem('jiosi_auth_token', token);
+      } else {
+        localStorage.removeItem('jiosi_auth_token');
+      }
+    }
+  }
+
   private getHeaders(): HeadersInit {
-    return {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       'X-Workspace-Id': this.workspaceId,
     };
+    if (this.authToken) {
+      headers['Authorization'] = this.authToken.startsWith('Bearer ') ? this.authToken : `Bearer ${this.authToken}`;
+    }
+    return headers;
+  }
+
+  async initAuth(email: string = 'alex@jiosi.online'): Promise<AuthSessionData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/auth/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Authentication failed: HTTP ${res.status}`);
+    }
+
+    const body: ApiResponse<AuthSessionData> = await res.json();
+    if (body.data && body.data.token) {
+      this.setAuthToken(body.data.token);
+      if (body.data.defaultWorkspaceId) {
+        this.setWorkspaceId(body.data.defaultWorkspaceId);
+      }
+    }
+    return body.data;
   }
 
   async checkHealth(): Promise<HealthCheckResult> {
@@ -205,7 +264,7 @@ export class ApiClient {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to archive conversation: HTTP ${res.status}`);
+      throw new Error(`Failed to update archive status: HTTP ${res.status}`);
     }
 
     const body: ApiResponse<EmailThread> = await res.json();
@@ -220,7 +279,7 @@ export class ApiClient {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to update snooze: HTTP ${res.status}`);
+      throw new Error(`Failed to snooze thread: HTTP ${res.status}`);
     }
 
     const body: ApiResponse<EmailThread> = await res.json();
@@ -251,11 +310,11 @@ export class ApiClient {
     }
   }
 
-  async sendReply(threadId: string, bodyText: string, toEmail?: string): Promise<EmailThread> {
+  async sendReply(threadId: string, recipientEmail: string, bodyText: string): Promise<EmailThread> {
     const res = await fetch(`${this.baseUrl}/api/v1/threads/${threadId}/reply`, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ body: bodyText, toEmail }),
+      body: JSON.stringify({ recipientEmail, body: bodyText }),
     });
 
     if (!res.ok) {
@@ -266,11 +325,11 @@ export class ApiClient {
     return body.data;
   }
 
-  async sendNewEmail(to: string, subject: string, bodyText: string): Promise<EmailThread> {
+  async sendNewEmail(toEmail: string, subject: string, bodyText: string): Promise<EmailThread> {
     const res = await fetch(`${this.baseUrl}/api/v1/threads/send`, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ toEmail: to, subject, body: bodyText }),
+      body: JSON.stringify({ toEmail, subject, body: bodyText }),
     });
 
     if (!res.ok) {
@@ -281,15 +340,49 @@ export class ApiClient {
     return body.data;
   }
 
-  async saveDraft(toEmail: string, subject: string, bodyText: string, threadId?: string): Promise<void> {
+  async saveDraft(toEmail: string, recipientName: string, subject: string, bodyText: string, threadId?: string): Promise<{ id: string }> {
     const res = await fetch(`${this.baseUrl}/api/v1/drafts`, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ toEmail, subject, body: bodyText, threadId }),
+      body: JSON.stringify({
+        threadId: threadId || null,
+        toEmail,
+        recipientName,
+        subject,
+        body: bodyText,
+      }),
     });
 
     if (!res.ok) {
       throw new Error(`Failed to save draft: HTTP ${res.status}`);
+    }
+
+    const body: ApiResponse<{ id: string }> = await res.json();
+    return body.data;
+  }
+
+  async fetchDrafts(): Promise<Array<{ id: string; toEmail: string; subject: string; body: string; updatedAt: string }>> {
+    const res = await fetch(`${this.baseUrl}/api/v1/drafts`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch drafts: HTTP ${res.status}`);
+    }
+
+    const body: ApiResponse<{ content: Array<{ id: string; toEmail: string; subject: string; body: string; updatedAt: string }> }> = await res.json();
+    return body.data.content;
+  }
+
+  async deleteDraft(id: string): Promise<void> {
+    const res = await fetch(`${this.baseUrl}/api/v1/drafts/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to delete draft: HTTP ${res.status}`);
     }
   }
 }

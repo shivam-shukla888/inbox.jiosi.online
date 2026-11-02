@@ -3,9 +3,12 @@ package com.jiosi.inbox.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jiosi.inbox.email.*;
 import com.jiosi.inbox.email.dto.*;
+import com.jiosi.inbox.security.AuthTokenService;
 import com.jiosi.inbox.user.User;
 import com.jiosi.inbox.user.UserRepository;
 import com.jiosi.inbox.workspace.Workspace;
+import com.jiosi.inbox.workspace.WorkspaceMember;
+import com.jiosi.inbox.workspace.WorkspaceMemberRepository;
 import com.jiosi.inbox.workspace.WorkspaceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,15 +50,24 @@ class EmailThreadApiTest {
     private WorkspaceRepository workspaceRepository;
 
     @Autowired
+    private WorkspaceMemberRepository workspaceMemberRepository;
+
+    @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AuthTokenService authTokenService;
 
     private Workspace workspace;
     private EmailThread thread;
+    private String authToken;
 
     @BeforeEach
     void setUp() {
-        User user = userRepository.save(new User("founder@jiosi.online", "Alex Rivera", "AR"));
+        User user = userRepository.save(new User("founder-" + UUID.randomUUID() + "@jiosi.online", "Alex Rivera", "AR"));
         workspace = workspaceRepository.save(new Workspace("JIOSI Primary", "jiosi-primary-" + UUID.randomUUID(), user));
+        workspaceMemberRepository.save(new WorkspaceMember(workspace, user, "OWNER"));
+        authToken = "Bearer " + authTokenService.generateToken(user);
 
         thread = new EmailThread();
         thread.setWorkspace(workspace);
@@ -86,13 +98,15 @@ class EmailThreadApiTest {
 
     @Test
     void testGetThreads_MissingWorkspaceHeader_ReturnsBadRequest() throws Exception {
-        mockMvc.perform(get("/api/v1/threads"))
+        mockMvc.perform(get("/api/v1/threads")
+                        .header("Authorization", authToken))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void testGetThreads_ValidWorkspace_ReturnsThreadListAndCounts() throws Exception {
         mockMvc.perform(get("/api/v1/threads")
+                        .header("Authorization", authToken)
                         .header("X-Workspace-Id", workspace.getId().toString())
                         .param("folder", "inbox"))
                 .andExpect(status().isOk())
@@ -108,6 +122,7 @@ class EmailThreadApiTest {
     @Test
     void testGetThreadDetail_ReturnsThreadAndMessages() throws Exception {
         mockMvc.perform(get("/api/v1/threads/" + thread.getId())
+                        .header("Authorization", authToken)
                         .header("X-Workspace-Id", workspace.getId().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -119,6 +134,7 @@ class EmailThreadApiTest {
     @Test
     void testSearchThreads_ReturnsMatchingResults() throws Exception {
         mockMvc.perform(get("/api/v1/threads/search")
+                        .header("Authorization", authToken)
                         .header("X-Workspace-Id", workspace.getId().toString())
                         .param("q", "Term Sheet"))
                 .andExpect(status().isOk())
@@ -131,6 +147,7 @@ class EmailThreadApiTest {
         UpdateReadRequest req = new UpdateReadRequest(false);
 
         mockMvc.perform(patch("/api/v1/threads/" + thread.getId() + "/read")
+                        .header("Authorization", authToken)
                         .header("X-Workspace-Id", workspace.getId().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -144,6 +161,7 @@ class EmailThreadApiTest {
         UpdateStarRequest req = new UpdateStarRequest(false);
 
         mockMvc.perform(patch("/api/v1/threads/" + thread.getId() + "/star")
+                        .header("Authorization", authToken)
                         .header("X-Workspace-Id", workspace.getId().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -157,6 +175,7 @@ class EmailThreadApiTest {
         UpdateArchiveRequest req = new UpdateArchiveRequest(true);
 
         mockMvc.perform(patch("/api/v1/threads/" + thread.getId() + "/archive")
+                        .header("Authorization", authToken)
                         .header("X-Workspace-Id", workspace.getId().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -170,6 +189,7 @@ class EmailThreadApiTest {
         BatchReadRequest req = new BatchReadRequest(List.of(thread.getId()), false);
 
         mockMvc.perform(post("/api/v1/threads/batch/read")
+                        .header("Authorization", authToken)
                         .header("X-Workspace-Id", workspace.getId().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -182,6 +202,7 @@ class EmailThreadApiTest {
         SendReplyRequest req = new SendReplyRequest("Thank you Sarah, let's connect Thursday.", "sarah@kinto.ventures");
 
         mockMvc.perform(post("/api/v1/threads/" + thread.getId() + "/reply")
+                        .header("Authorization", authToken)
                         .header("X-Workspace-Id", workspace.getId().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -197,6 +218,7 @@ class EmailThreadApiTest {
         SendEmailRequest req = new SendEmailRequest("dr.hayes@deeptech.org", "Whitepaper Feedback", "Here is the new draft.");
 
         mockMvc.perform(post("/api/v1/threads/send")
+                        .header("Authorization", authToken)
                         .header("X-Workspace-Id", workspace.getId().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))

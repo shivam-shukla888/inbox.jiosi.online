@@ -6,7 +6,7 @@ export type EmailFolder =
   | 'sent'
   | 'drafts';
 
-export type AppView = 'mail' | 'settings' | 'connected-accounts';
+export type AppView = 'mail' | 'settings' | 'connected-accounts' | 'landing' | 'privacy' | 'terms' | 'support';
 
 export type SettingsTab =
   | 'general'

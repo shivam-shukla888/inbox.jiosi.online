@@ -14,3 +14,8 @@ logging:
   level:
     root: WARN
     com.jiosi.inbox: INFO
+
+app:
+  security:
+    enabled: true
+    jwt-secret: jiosi_test_hmac_secret_key_minimum_32_bytes_long
