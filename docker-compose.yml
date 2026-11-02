@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: jiosi-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-jiosi_inbox}
+      POSTGRES_USER: ${POSTGRES_USER:-jiosi_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jiosi_secure_password_example}
+    ports:
+      - "${HOST_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jiosi_user} -d ${POSTGRES_DB:-jiosi_inbox}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - jiosi-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jiosi-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-jiosi_inbox}
+      POSTGRES_USER: ${POSTGRES_USER:-jiosi_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jiosi_secure_password_example}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:80,https://inbox.jiosi.online}
+    ports:
+      - "8080:8080"
+    networks:
+      - jiosi-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: jiosi-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - jiosi-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  jiosi-network:
+    driver: bridge

@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Production builds
+dist/
+build/
+target/
+*.jar
+*.war
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# IDE & editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+.project
+.classpath
+.settings/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & temp files
+*.log
+logs/
+temp/
+tmp/
+.playwright-mcp/
+
+# Docker volumes
+.docker-data/
+postgres-data/
