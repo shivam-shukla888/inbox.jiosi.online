@@ -45,18 +45,18 @@ export const EmailFilters: React.FC<EmailFiltersProps> = ({
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-all select-none cursor-pointer ${
                   active
                     ? isNeedsReplyTab
-                      ? 'bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 font-semibold'
-                      : 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-semibold shadow-xs'
+                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 font-medium border border-rose-200/60 dark:border-rose-900/40'
+                      : 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-medium shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <span>{f.label}</span>
                 <span
-                  className={`text-[10px] font-mono ${
+                  className={`text-[10px] font-mono tabular-nums ${
                     active
                       ? isNeedsReplyTab
-                        ? 'text-red-600 dark:text-red-400 font-bold'
-                        : 'text-slate-300 dark:text-slate-600 font-bold'
+                        ? 'text-rose-600 dark:text-rose-400 font-semibold'
+                        : 'text-slate-300 dark:text-slate-600 font-semibold'
                       : 'text-slate-400 dark:text-slate-500'
                   }`}
                 >

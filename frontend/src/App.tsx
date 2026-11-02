@@ -298,6 +298,20 @@ export const App: React.FC = () => {
     };
   }, [emails, serverCounts, isDemoMode]);
 
+  const headerTitle = useMemo(() => {
+    const folderNames: Record<EmailFolder, string> = {
+      inbox: 'Inbox',
+      'needs-reply': 'Needs Reply',
+      starred: 'Starred',
+      snoozed: 'Snoozed',
+      sent: 'Sent',
+      drafts: 'Drafts',
+    };
+    if (currentView === 'settings') return 'Settings';
+    if (currentView === 'connected-accounts') return 'Connected Accounts';
+    return folderNames[currentFolder] || 'Inbox';
+  }, [currentView, currentFolder]);
+
   // Category counts for current folder
   const filterCounts = useMemo(() => {
     const base = emails.filter((e) => !e.isSnoozed && !e.isSent && !e.isDraft);
@@ -639,6 +653,7 @@ export const App: React.FC = () => {
         }
         header={
           <Header
+            currentTitle={headerTitle}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}

@@ -5,6 +5,7 @@ import { ThemeToggle } from '../ui/ThemeToggle';
 import { ProfileMenu } from '../profile/ProfileMenu';
 
 interface HeaderProps {
+  currentTitle?: string;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onOpenCommandPalette: () => void;
@@ -21,6 +22,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
+  currentTitle,
   searchQuery,
   onSearchChange,
   onOpenCommandPalette,
@@ -37,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 flex items-center justify-between gap-3 shrink-0 z-20">
-      <div className="flex items-center gap-3 flex-1 max-w-2xl">
+      <div className="flex items-center gap-3.5 flex-1 max-w-2xl">
         <button
           onClick={onToggleMobileMenu}
           className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors cursor-pointer"
@@ -46,19 +48,11 @@ export const Header: React.FC<HeaderProps> = ({
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Header Brand Lockup */}
-        <div className="flex flex-col shrink-0 justify-center">
-          <div className="flex items-center gap-1.5 leading-none">
-            <span className="text-xs sm:text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-              JIOSI Inbox
-            </span>
-            <span className="hidden sm:inline-block text-[10px] font-normal text-slate-500 dark:text-slate-400">
-              by Shivsastra
-            </span>
-          </div>
-          <span className="sm:hidden text-[9px] font-normal text-slate-500 dark:text-slate-400 leading-none mt-0.5">
-            by Shivsastra
-          </span>
+        {/* Current Page / Folder Title (Contextual Hierarchy) */}
+        <div className="flex items-center gap-2 shrink-0">
+          <h2 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100 leading-none">
+            {currentTitle || 'Inbox'}
+          </h2>
         </div>
 
         {/* Global Search Bar (Screen 3) */}

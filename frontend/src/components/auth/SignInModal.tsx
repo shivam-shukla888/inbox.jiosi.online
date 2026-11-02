@@ -57,14 +57,9 @@ export const SignInModal: React.FC<SignInModalProps> = ({
               JI
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <h2 id="signin-title" className="text-lg font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
-                  JIOSI Inbox
-                </h2>
-                <span className="text-[10px] font-mono font-medium text-brand-600 dark:text-brand-400 px-1.5 py-0.2 bg-brand-50 dark:bg-brand-950/60 rounded border border-brand-200 dark:border-brand-800">
-                  AI
-                </span>
-              </div>
+              <h2 id="signin-title" className="text-lg font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+                JIOSI Inbox
+              </h2>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
                 by Shivsastra
               </p>
@@ -149,3 +144,4 @@ export const SignInModal: React.FC<SignInModalProps> = ({
     </div>
   );
 };
+

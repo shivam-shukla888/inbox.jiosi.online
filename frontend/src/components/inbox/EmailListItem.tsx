@@ -22,17 +22,17 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
   return (
     <div
       onClick={onSelect}
-      className={`group relative flex items-start gap-3 px-3.5 py-3 border-b border-slate-100 dark:border-slate-800/80 cursor-pointer transition-all select-none ${
+      className={`group relative flex items-start gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800/80 cursor-pointer transition-all select-none ${
         isSelected
-          ? 'bg-brand-50/70 dark:bg-slate-800/90 border-l-3 border-l-brand-600 dark:border-l-brand-400 pl-[11px]'
-          : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850'
+          ? 'bg-brand-50/60 dark:bg-slate-800/90 border-l-2 border-l-brand-600 dark:border-l-brand-400 pl-[14px]'
+          : 'bg-white dark:bg-slate-900 hover:bg-slate-50/80 dark:hover:bg-slate-850/60'
       }`}
     >
       {/* Action / State Indicators (Left Column) */}
       <div className="flex flex-col items-center gap-2 pt-0.5 shrink-0">
         <button
           onClick={onToggleCheck}
-          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5"
+          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5 rounded"
           aria-label={isChecked ? 'Deselect thread' : 'Select thread'}
         >
           {isChecked ? (
@@ -42,11 +42,7 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
           )}
         </button>
 
-        {/* Action Status Indicator:
-            - RED DOT: Urgent / Needs Reply
-            - BLUE DOT: Normal Unread (without urgent needs-reply)
-            - Blank: Read
-        */}
+        {/* Action Status Indicator */}
         {email.isNeedsReply ? (
           <span
             className="w-2 h-2 rounded-full bg-action-urgent ring-2 ring-red-100 dark:ring-red-950/80 shrink-0"
@@ -68,7 +64,7 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
         <div className="flex items-center justify-between gap-2 mb-0.5">
           <div className="flex items-center gap-1.5 overflow-hidden">
             <span
-              className={`text-xs truncate ${
+              className={`text-xs sm:text-[13px] truncate ${
                 email.isUnread
                   ? 'font-semibold text-slate-900 dark:text-slate-100'
                   : 'font-medium text-slate-700 dark:text-slate-300'
@@ -93,24 +89,24 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
             </button>
           </div>
 
-          <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500 shrink-0">
+          <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500 tabular-nums shrink-0">
             {email.timestamp}
           </span>
         </div>
 
         {/* Subject */}
         <p
-          className={`text-xs truncate mb-1 ${
+          className={`text-xs sm:text-[13px] truncate my-0.5 leading-snug ${
             email.isUnread
               ? 'font-semibold text-slate-900 dark:text-slate-100'
-              : 'font-normal text-slate-700 dark:text-slate-300'
+              : 'font-normal text-slate-600 dark:text-slate-300'
           }`}
         >
           {email.subject || '(No subject)'}
         </p>
 
         {/* Clean one-line preview */}
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-snug">
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-relaxed">
           {email.snippet}
         </p>
 
@@ -118,20 +114,20 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
         <div className="flex items-center justify-between gap-2 mt-1.5 pt-0.5">
           <div className="flex items-center gap-1.5 overflow-hidden">
             {email.isNeedsReply && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400 border border-red-200 dark:border-red-900/60">
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/80 dark:border-rose-900/60">
                 Needs Reply
               </span>
             )}
 
             {email.isSnoozed && email.snoozedUntil && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-slate-500 dark:text-slate-400 px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                 <Clock className="w-2.5 h-2.5 text-slate-400" />
                 Until {email.snoozedUntil}
               </span>
             )}
 
             {email.isDraft && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-brand-600 dark:text-brand-400 px-1.5 py-0.2 rounded bg-brand-50 dark:bg-brand-950/50 border border-brand-200 dark:border-brand-800">
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-brand-600 dark:text-brand-400 px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/50 border border-brand-200 dark:border-brand-800">
                 <FileEdit className="w-2.5 h-2.5" />
                 Draft · {email.lastEdited}
               </span>

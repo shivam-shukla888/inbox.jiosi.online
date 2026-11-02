@@ -99,20 +99,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }`}
       >
         {/* Top: Brand, Workspace & Compose */}
-        <div className="p-4 space-y-3.5">
+        <div className="p-4 space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white font-mono font-bold text-xs tracking-wider shadow-sm shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white font-mono font-bold text-xs tracking-wider shadow-sm shrink-0">
                 JI
               </div>
-              <div>
-                <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-1.5 leading-tight">
+              <div className="flex flex-col">
+                <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100 leading-snug">
                   JIOSI Inbox
-                  <span className="text-[10px] font-mono font-medium text-brand-600 dark:text-brand-400 px-1.5 py-0.2 bg-brand-50 dark:bg-brand-950/60 rounded border border-brand-200 dark:border-brand-800">
-                    AI
-                  </span>
                 </h1>
-                <span className="block text-[10px] font-normal text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+                <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400 leading-none mt-0.5">
                   by Shivsastra
                 </span>
               </div>
@@ -130,16 +127,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Workspace Pill */}
-          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-left">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <div className="w-5 h-5 rounded-full bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300 flex items-center justify-center font-mono text-[10px] font-semibold">
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-left">
+            <div className="flex items-center gap-2.5 overflow-hidden">
+              <div className="w-5 h-5 rounded-full bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300 flex items-center justify-center font-mono text-[10px] font-semibold shrink-0">
                 A
               </div>
               <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
                 alex@jiosi.online
               </span>
             </div>
-            <span className="w-2 h-2 rounded-full bg-emerald-500" title="Connected" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Connected" />
           </div>
 
           {/* High-Contrast Compose Action with Purple Brand Style */}
