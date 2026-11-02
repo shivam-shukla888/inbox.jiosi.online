@@ -1,7 +1,6 @@
 import React from 'react';
 import { CategoryFilter } from '../../types/email';
-import { CheckSquare, Square, Mail, Clock } from 'lucide-react';
-import { Kbd } from '../ui/Kbd';
+import { CheckSquare, Square, Mail, Archive } from 'lucide-react';
 
 interface EmailFiltersProps {
   currentFilter: CategoryFilter;
@@ -10,6 +9,7 @@ interface EmailFiltersProps {
   allSelected: boolean;
   onToggleSelectAll: () => void;
   onMarkSelectedAsRead: () => void;
+  onArchiveSelected?: () => void;
   hasSelection: boolean;
 }
 
@@ -20,78 +20,89 @@ export const EmailFilters: React.FC<EmailFiltersProps> = ({
   allSelected,
   onToggleSelectAll,
   onMarkSelectedAsRead,
+  onArchiveSelected,
   hasSelection,
 }) => {
   const filters: { id: CategoryFilter; label: string }[] = [
     { id: 'all', label: 'All' },
     { id: 'unread', label: 'Unread' },
+    { id: 'needs-reply', label: 'Needs Reply' },
     { id: 'vip', label: 'VIP' },
-    { id: 'mentions', label: 'Mentions' },
   ];
 
   return (
-    <div className="flex flex-col border-b border-border-subtle bg-canvas-alt/50">
-      {/* Category Tabs */}
-      <div className="flex items-center justify-between px-3 pt-2 pb-1.5 gap-2 overflow-x-auto">
+    <div className="flex flex-col border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 gap-2 overflow-x-auto">
+        {/* Category Pills */}
         <div className="flex items-center gap-1">
           {filters.map((f) => {
             const active = currentFilter === f.id;
+            const isNeedsReplyTab = f.id === 'needs-reply';
             return (
               <button
                 key={f.id}
                 onClick={() => onSelectFilter(f.id)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors select-none ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-all select-none cursor-pointer ${
                   active
-                    ? 'bg-ink-primary text-canvas font-medium shadow-xs'
-                    : 'text-ink-secondary hover:bg-canvas-surface'
+                    ? isNeedsReplyTab
+                      ? 'bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 font-semibold'
+                      : 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-semibold shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <span>{f.label}</span>
                 <span
                   className={`text-[10px] font-mono ${
-                    active ? 'text-canvas/80' : 'text-ink-muted'
+                    active
+                      ? isNeedsReplyTab
+                        ? 'text-red-600 dark:text-red-400 font-bold'
+                        : 'text-slate-300 dark:text-slate-600 font-bold'
+                      : 'text-slate-400 dark:text-slate-500'
                   }`}
                 >
-                  {counts[f.id]}
+                  {counts[f.id] ?? 0}
                 </span>
               </button>
             );
           })}
         </div>
 
-        {/* Batch Toolbar when selected or hovering */}
-        <div className="flex items-center gap-1 text-ink-muted">
+        {/* Multi-Select Toolbar */}
+        <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
           <button
             onClick={onToggleSelectAll}
-            className="p-1 rounded hover:bg-canvas-surface hover:text-ink-primary transition-colors text-xs flex items-center gap-1"
+            className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
             title="Toggle Select All"
+            aria-label="Toggle Select All"
           >
             {allSelected ? (
-              <CheckSquare className="w-3.5 h-3.5 text-ink-primary" />
+              <CheckSquare className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
             ) : (
               <Square className="w-3.5 h-3.5" />
             )}
           </button>
 
           {hasSelection && (
-            <>
+            <div className="flex items-center gap-1">
               <button
                 onClick={onMarkSelectedAsRead}
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs hover:bg-canvas-surface hover:text-ink-primary transition-colors"
-                title="Mark selected as read (⌘E)"
+                className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors text-xs flex items-center cursor-pointer"
+                title="Mark selected as read"
+                aria-label="Mark selected as read"
               >
-                <Mail className="w-3 h-3" />
-                <Kbd>⌘E</Kbd>
+                <Mail className="w-3.5 h-3.5" />
               </button>
-              <button
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs hover:bg-canvas-surface hover:text-ink-primary transition-colors opacity-60"
-                title="Snooze (H)"
-                disabled
-              >
-                <Clock className="w-3 h-3" />
-                <Kbd>H</Kbd>
-              </button>
-            </>
+              {onArchiveSelected && (
+                <button
+                  onClick={onArchiveSelected}
+                  className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors text-xs flex items-center cursor-pointer"
+                  title="Archive selected"
+                  aria-label="Archive selected"
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

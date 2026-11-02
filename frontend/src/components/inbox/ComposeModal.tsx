@@ -1,120 +1,302 @@
-import React, { useState } from 'react';
-import { X, SendHorizontal, Paperclip, Minimize2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, SendHorizontal, Paperclip, Sparkles, FileEdit } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { AiTone } from '../../types/email';
 
 interface ComposeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSend: (to: string, subject: string, body: string) => void;
+  onSaveDraft?: (to: string, subject: string, body: string) => void;
+  initialTo?: string;
+  initialSubject?: string;
+  initialBody?: string;
 }
 
 export const ComposeModal: React.FC<ComposeModalProps> = ({
   isOpen,
   onClose,
   onSend,
+  onSaveDraft,
+  initialTo = '',
+  initialSubject = '',
+  initialBody = '',
 }) => {
-  const [to, setTo] = useState('');
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
+  const [to, setTo] = useState(initialTo);
+  const [showCcBcc, setShowCcBcc] = useState(false);
+  const [cc, setCc] = useState('');
+  const [bcc, setBcc] = useState('');
+  const [subject, setSubject] = useState(initialSubject);
+  const [body, setBody] = useState(initialBody);
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [lastSaved, setLastSaved] = useState<string>('Saved just now');
+
+  useEffect(() => {
+    if (isOpen) {
+      setTo(initialTo);
+      setSubject(initialSubject);
+      setBody(initialBody);
+    }
+  }, [isOpen, initialTo, initialSubject, initialBody]);
+
+  // Simulate auto-save draft timer
+  useEffect(() => {
+    if (!isOpen || (!to && !subject && !body)) return;
+    const timer = setTimeout(() => {
+      setLastSaved('Draft saved');
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [isOpen, to, subject, body]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!to || !subject) return;
+    if (!to.trim()) {
+      setValidationError('Please specify a recipient email address.');
+      return;
+    }
+    if (!to.includes('@')) {
+      setValidationError('Please enter a valid email address.');
+      return;
+    }
+    if (!subject.trim()) {
+      setValidationError('Please provide a subject line.');
+      return;
+    }
+
+    setValidationError(null);
     onSend(to, subject, body);
-    setTo('');
-    setSubject('');
-    setBody('');
     onClose();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
+  const handleApplyAiTone = (tone: AiTone) => {
+    if (!body.trim()) {
+      setBody(
+        tone === 'professional'
+          ? 'Dear team,\n\nI am writing to share our progress updates and request your feedback by Thursday.\n\nBest regards,\nAlex Rivera'
+          : tone === 'friendly'
+          ? 'Hey everyone,\n\nQuick heads up on the latest milestones! Let me know what you think when you have a moment.\n\nCheers,\nAlex'
+          : 'Status update attached. Feedback requested by Thursday.\n\nAlex'
+      );
+    } else {
+      setBody((prev) =>
+        tone === 'concise'
+          ? prev.split('\n\n').slice(0, 2).join('\n\n')
+          : `${prev}\n\n[Refined with ${tone} tone]`
+      );
+    }
+  };
+
+  const handleAttachMockFile = () => {
+    setAttachments((prev) => [...prev, `Project_Summary_${prev.length + 1}.pdf`]);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-primary/20 backdrop-blur-xs">
-      <div className="w-full max-w-xl bg-white border border-border-strong rounded-lg shadow-command overflow-hidden flex flex-col animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
+      <div
+        className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-modal overflow-hidden flex flex-col max-h-[90vh]"
+        onKeyDown={handleKeyDown}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle bg-canvas-alt">
-          <span className="text-xs font-semibold text-ink-primary">
-            New Message
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={onClose}
-              className="p-1 rounded hover:bg-canvas-surface text-ink-muted hover:text-ink-primary"
-            >
-              <Minimize2 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={onClose}
-              className="p-1 rounded hover:bg-canvas-surface text-ink-muted hover:text-ink-primary"
-            >
-              <X className="w-4 h-4" />
-            </button>
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+              New Message
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono">
+              · {lastSaved}
+            </span>
           </div>
+
+          <button
+            onClick={onClose}
+            className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label="Close composer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-          <div className="border-b border-border-subtle px-4 py-2 flex items-center gap-2">
-            <span className="text-xs font-mono text-ink-muted w-12">To:</span>
+        {/* Validation Alert */}
+        {validationError && (
+          <div className="px-5 py-2 bg-red-50 dark:bg-red-950/40 border-b border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-xs">
+            {validationError}
+          </div>
+        )}
+
+        {/* Form Fields */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          {/* To field */}
+          <div className="border-b border-slate-100 dark:border-slate-800 px-5 py-2.5 flex items-center gap-2">
+            <span className="text-xs font-mono text-slate-400 w-12">To:</span>
             <input
-              type="email"
+              type="text"
               value={to}
-              onChange={(e) => setTo(e.target.value)}
-              placeholder="recipient@example.com"
-              required
-              className="w-full text-xs text-ink-primary focus:outline-none"
+              onChange={(e) => {
+                setTo(e.target.value);
+                setValidationError(null);
+              }}
+              placeholder="name@company.com"
+              className="w-full text-xs sm:text-sm bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
+              autoFocus
             />
+            {!showCcBcc && (
+              <button
+                type="button"
+                onClick={() => setShowCcBcc(true)}
+                className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-mono"
+              >
+                Cc/Bcc
+              </button>
+            )}
           </div>
 
-          <div className="border-b border-border-subtle px-4 py-2 flex items-center gap-2">
-            <span className="text-xs font-mono text-ink-muted w-12">Subject:</span>
+          {/* Optional CC/BCC */}
+          {showCcBcc && (
+            <>
+              <div className="border-b border-slate-100 dark:border-slate-800 px-5 py-2 flex items-center gap-2 bg-slate-50/30 dark:bg-slate-850">
+                <span className="text-xs font-mono text-slate-400 w-12">Cc:</span>
+                <input
+                  type="text"
+                  value={cc}
+                  onChange={(e) => setCc(e.target.value)}
+                  placeholder="colleagues@company.com"
+                  className="w-full text-xs bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
+                />
+              </div>
+              <div className="border-b border-slate-100 dark:border-slate-800 px-5 py-2 flex items-center gap-2 bg-slate-50/30 dark:bg-slate-850">
+                <span className="text-xs font-mono text-slate-400 w-12">Bcc:</span>
+                <input
+                  type="text"
+                  value={bcc}
+                  onChange={(e) => setBcc(e.target.value)}
+                  placeholder="counsel@company.com"
+                  className="w-full text-xs bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Subject field */}
+          <div className="border-b border-slate-100 dark:border-slate-800 px-5 py-2.5 flex items-center gap-2">
+            <span className="text-xs font-mono text-slate-400 w-12">Subject:</span>
             <input
               type="text"
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Message subject"
-              required
-              className="w-full text-xs text-ink-primary focus:outline-none"
+              onChange={(e) => {
+                setSubject(e.target.value);
+                setValidationError(null);
+              }}
+              placeholder="Subject line"
+              className="w-full text-xs sm:text-sm bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
             />
           </div>
 
-          <div className="p-4 flex-1">
+          {/* AI Tone Assistance Toolbar */}
+          <div className="px-5 py-2 bg-slate-50/50 dark:bg-slate-850 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 overflow-x-auto">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+              <Sparkles className="w-3.5 h-3.5 text-brand-500 shrink-0" />
+              <span>AI Tone Draft:</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {(['professional', 'friendly', 'concise'] as const).map((tone) => (
+                <button
+                  key={tone}
+                  type="button"
+                  onClick={() => handleApplyAiTone(tone)}
+                  className="px-2 py-0.5 rounded text-[10px] font-medium capitalize bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                >
+                  {tone}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Body Editor */}
+          <div className="p-5 flex-1 flex flex-col min-h-[180px] overflow-y-auto">
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              rows={8}
-              placeholder="Write your email here..."
-              className="w-full text-xs text-ink-primary leading-relaxed focus:outline-none resize-none"
+              placeholder="Type your message here... Use ⌘↵ to send anytime."
+              className="w-full flex-1 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 leading-relaxed bg-transparent focus:outline-none resize-none"
             />
+
+            {/* Attached files chips */}
+            {attachments.length > 0 && (
+              <div className="flex items-center gap-2 pt-3 flex-wrap">
+                {attachments.map((file, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 font-mono border border-slate-200 dark:border-slate-700"
+                  >
+                    <Paperclip className="w-3 h-3 text-brand-500" />
+                    <span>{file}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAttachments((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                      className="hover:text-red-500 ml-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border-subtle bg-canvas-alt">
-            <div className="flex items-center gap-2 text-ink-muted">
+          {/* Footer Actions */}
+          <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
+            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
               <button
                 type="button"
-                className="p-1.5 rounded hover:bg-canvas-surface hover:text-ink-primary transition-colors"
+                onClick={handleAttachMockFile}
+                className="p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
                 title="Attach file"
               >
                 <Paperclip className="w-4 h-4" />
               </button>
-              <span className="text-[10px] font-mono text-ink-subtle">
-                Draft auto-saved
-              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  onSaveDraft?.(to, subject, body);
+                  onClose();
+                }}
+                className="p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+                title="Save as Draft"
+              >
+                <FileEdit className="w-4 h-4" />
+              </button>
             </div>
 
             <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={onClose}
+              >
                 Discard
               </Button>
+
               <Button
-                type="submit"
-                variant="primary"
+                variant="brand"
                 size="sm"
+                type="submit"
                 icon={<SendHorizontal className="w-3.5 h-3.5" />}
+                shortcut="⌘↵"
               >
-                Send
+                Send Message
               </Button>
             </div>
           </div>

@@ -2,46 +2,91 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { AppShell } from './components/layout/AppShell';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import { MobileNavigation } from './components/layout/MobileNavigation';
 import { EmailList } from './components/inbox/EmailList';
 import { EmailDetail } from './components/inbox/EmailDetail';
 import { ComposeModal } from './components/inbox/ComposeModal';
 import { CommandPalette } from './components/inbox/CommandPalette';
+import { SettingsView } from './components/settings/SettingsView';
+import { Toast, ToastType } from './components/ui/Toast';
 import { DEMO_EMAILS } from './data/mockEmails';
-import { EmailThread, EmailFolder, CategoryFilter } from './types/email';
+import {
+  EmailThread,
+  EmailFolder,
+  CategoryFilter,
+  AppView,
+  SettingsTab,
+} from './types/email';
 
 export const App: React.FC = () => {
+  // Theme state: initialized from localStorage or prefers-color-scheme
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    const saved = localStorage.getItem('jiosi_theme');
+    if (saved) return saved === 'dark';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  // Apply dark class to <html> root
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('jiosi_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('jiosi_theme', 'light');
+    }
+  }, [isDark]);
+
+  const toggleTheme = useCallback(() => {
+    setIsDark((prev) => !prev);
+  }, []);
+
+  // Main Application State
   const [emails, setEmails] = useState<EmailThread[]>(DEMO_EMAILS);
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>('thread-1');
   const [currentFolder, setCurrentFolder] = useState<EmailFolder>('inbox');
   const [currentFilter, setCurrentFilter] = useState<CategoryFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Views & Modals
+  const [currentView, setCurrentView] = useState<AppView>('mail');
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('general');
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
 
-  // Folder and Filter counts
+  // Toast feedback state
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+  const showToast = useCallback((message: string, type: ToastType = 'success') => {
+    setToast({ message, type });
+  }, []);
+
+  // Folder Counts
   const folderCounts = useMemo(() => {
+    const activeEmails = emails.filter((e) => !e.isSnoozed && !e.isSent && !e.isDraft);
     return {
       inbox: {
-        total: emails.length,
-        unread: emails.filter((e) => e.isUnread).length,
-      },
-      important: {
-        total: emails.filter((e) => e.isImportant).length,
-        unread: emails.filter((e) => e.isImportant && e.isUnread).length,
+        total: activeEmails.length,
+        unread: activeEmails.filter((e) => e.isUnread).length,
       },
       'needs-reply': {
-        total: emails.filter((e) => e.isNeedsReply).length,
+        total: emails.filter((e) => e.isNeedsReply && !e.isSent && !e.isDraft).length,
         unread: emails.filter((e) => e.isNeedsReply && e.isUnread).length,
       },
-      'follow-ups': {
-        total: emails.filter((e) => e.isFollowUp).length,
-        unread: emails.filter((e) => e.isFollowUp && e.isUnread).length,
+      starred: {
+        total: emails.filter((e) => e.isStarred).length,
       },
-      search: {
-        total: emails.length,
-        unread: emails.filter((e) => e.isUnread).length,
+      snoozed: {
+        total: emails.filter((e) => e.isSnoozed).length,
+      },
+      sent: {
+        total: emails.filter((e) => e.isSent).length,
+      },
+      drafts: {
+        total: emails.filter((e) => e.isDraft).length,
       },
     };
   }, [emails]);
@@ -50,25 +95,33 @@ export const App: React.FC = () => {
   const filteredEmails = useMemo(() => {
     let result = emails;
 
-    // Folder filtering
-    if (currentFolder === 'important') {
-      result = result.filter((e) => e.isImportant);
+    // Folder isolation
+    if (currentFolder === 'inbox') {
+      result = result.filter((e) => !e.isSnoozed && !e.isSent && !e.isDraft);
     } else if (currentFolder === 'needs-reply') {
-      result = result.filter((e) => e.isNeedsReply);
-    } else if (currentFolder === 'follow-ups') {
-      result = result.filter((e) => e.isFollowUp);
+      result = result.filter((e) => e.isNeedsReply && !e.isSent && !e.isDraft);
+    } else if (currentFolder === 'starred') {
+      result = result.filter((e) => e.isStarred);
+    } else if (currentFolder === 'snoozed') {
+      result = result.filter((e) => e.isSnoozed);
+    } else if (currentFolder === 'sent') {
+      result = result.filter((e) => e.isSent);
+    } else if (currentFolder === 'drafts') {
+      result = result.filter((e) => e.isDraft);
     }
 
-    // Category filter
-    if (currentFilter === 'unread') {
-      result = result.filter((e) => e.isUnread);
-    } else if (currentFilter === 'vip') {
-      result = result.filter((e) => e.tags.includes('VIP') || e.isImportant);
-    } else if (currentFilter === 'mentions') {
-      result = result.filter((e) => e.tags.includes('Feedback') || e.tags.includes('Fundraising'));
+    // Category filter (within inbox)
+    if (currentFolder === 'inbox') {
+      if (currentFilter === 'unread') {
+        result = result.filter((e) => e.isUnread);
+      } else if (currentFilter === 'needs-reply') {
+        result = result.filter((e) => e.isNeedsReply);
+      } else if (currentFilter === 'vip') {
+        result = result.filter((e) => e.tags.includes('VIP') || e.tags.includes('Fundraising'));
+      }
     }
 
-    // Search query
+    // Search query real-time filtering
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -77,42 +130,100 @@ export const App: React.FC = () => {
           e.snippet.toLowerCase().includes(q) ||
           e.sender.name.toLowerCase().includes(q) ||
           e.sender.email.toLowerCase().includes(q) ||
-          e.body.toLowerCase().includes(q)
+          e.recipient.name.toLowerCase().includes(q) ||
+          e.recipient.email.toLowerCase().includes(q) ||
+          e.body.toLowerCase().includes(q) ||
+          (e.attachments &&
+            e.attachments.some((att) => att.filename.toLowerCase().includes(q)))
       );
     }
 
     return result;
   }, [emails, currentFolder, currentFilter, searchQuery]);
 
-  // Selected email object
+  // Active selected email object
   const selectedEmail = useMemo(() => {
     return emails.find((e) => e.id === selectedEmailId) || null;
   }, [emails, selectedEmailId]);
 
-  // Category counts for the current folder
-  const filterCounts = useMemo(() => {
-    let base = emails;
-    if (currentFolder === 'important') base = base.filter((e) => e.isImportant);
-    else if (currentFolder === 'needs-reply') base = base.filter((e) => e.isNeedsReply);
-    else if (currentFolder === 'follow-ups') base = base.filter((e) => e.isFollowUp);
+  // Ensure an email is selected when current list changes
+  useEffect(() => {
+    if (filteredEmails.length > 0) {
+      const stillInList = filteredEmails.some((e) => e.id === selectedEmailId);
+      if (!stillInList) {
+        setSelectedEmailId(filteredEmails[0].id);
+      }
+    } else {
+      setSelectedEmailId(null);
+    }
+  }, [filteredEmails, selectedEmailId]);
 
+  // Category counts for current folder
+  const filterCounts = useMemo(() => {
+    const base = emails.filter((e) => !e.isSnoozed && !e.isSent && !e.isDraft);
     return {
       all: base.length,
       unread: base.filter((e) => e.isUnread).length,
-      vip: base.filter((e) => e.tags.includes('VIP') || e.isImportant).length,
-      mentions: base.filter((e) => e.tags.includes('Feedback') || e.tags.includes('Fundraising')).length,
+      'needs-reply': base.filter((e) => e.isNeedsReply).length,
+      vip: base.filter((e) => e.tags.includes('VIP') || e.tags.includes('Fundraising')).length,
     };
-  }, [emails, currentFolder]);
+  }, [emails]);
 
-  // Handle email click: select and mark read
+  // Actions
   const handleSelectEmail = useCallback((id: string) => {
     setSelectedEmailId(id);
+    setIsMobileDetailOpen(true);
     setEmails((prev) =>
       prev.map((e) => (e.id === id ? { ...e, isUnread: false } : e))
     );
   }, []);
 
-  // Multi-select helpers
+  const handleToggleStar = useCallback((id: string) => {
+    setEmails((prev) =>
+      prev.map((e) => {
+        if (e.id === id) {
+          const nextState = !e.isStarred;
+          showToast(nextState ? 'Marked as starred' : 'Removed from starred', 'info');
+          return { ...e, isStarred: nextState };
+        }
+        return e;
+      })
+    );
+  }, [showToast]);
+
+  const handleSnooze = useCallback((id: string, until: string) => {
+    setEmails((prev) =>
+      prev.map((e) =>
+        e.id === id ? { ...e, isSnoozed: true, snoozedUntil: until } : e
+      )
+    );
+    showToast(`Conversation snoozed until ${until}`, 'success');
+  }, [showToast]);
+
+  const handleUnsnooze = useCallback((id: string) => {
+    setEmails((prev) =>
+      prev.map((e) =>
+        e.id === id ? { ...e, isSnoozed: false, snoozedUntil: undefined } : e
+      )
+    );
+    showToast('Conversation returned to Inbox.', 'success');
+  }, [showToast]);
+
+  const handleArchive = useCallback((id: string) => {
+    setEmails((prev) => prev.filter((e) => e.id !== id));
+    showToast('Thread archived.', 'success');
+    if (selectedEmailId === id) {
+      const remaining = filteredEmails.filter((e) => e.id !== id);
+      setSelectedEmailId(remaining.length > 0 ? remaining[0].id : null);
+      setIsMobileDetailOpen(false);
+    }
+  }, [filteredEmails, selectedEmailId, showToast]);
+
+  const handleDelete = useCallback((id: string) => {
+    handleArchive(id);
+    showToast('Conversation deleted.', 'info');
+  }, [handleArchive, showToast]);
+
   const handleToggleCheck = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -135,18 +246,14 @@ export const App: React.FC = () => {
       prev.map((e) => (selectedIds.has(e.id) ? { ...e, isUnread: false } : e))
     );
     setSelectedIds(new Set());
+    showToast('Selected messages marked as read.', 'success');
   };
 
-  const handleArchive = (id: string) => {
-    setEmails((prev) => prev.filter((e) => e.id !== id));
-    if (selectedEmailId === id) {
-      const remaining = emails.filter((e) => e.id !== id);
-      setSelectedEmailId(remaining.length > 0 ? remaining[0].id : null);
-    }
-  };
-
-  const handleDelete = (id: string) => {
-    handleArchive(id);
+  const handleArchiveSelected = () => {
+    const count = selectedIds.size;
+    setEmails((prev) => prev.filter((e) => !selectedIds.has(e.id)));
+    setSelectedIds(new Set());
+    showToast(`${count} conversations archived.`, 'success');
   };
 
   const handleSendEmail = (to: string, subject: string, body: string) => {
@@ -163,25 +270,60 @@ export const App: React.FC = () => {
         email: to,
       },
       subject,
-      snippet: body.slice(0, 80) + '...',
+      snippet: body.slice(0, 90) + '...',
       body,
       timestamp: 'Just now',
       date: 'Today',
       isUnread: false,
-      isImportant: false,
+      isStarred: false,
       isNeedsReply: false,
-      isFollowUp: false,
+      isSnoozed: false,
+      isSent: true,
       tags: ['Outgoing'],
     };
 
     setEmails((prev) => [newThread, ...prev]);
-    setSelectedEmailId(newThread.id);
+    showToast(`Email sent to ${to}`, 'success');
+  };
+
+  const handleSaveDraft = (to: string, subject: string, body: string) => {
+    const draftThread: EmailThread = {
+      id: `draft-${Date.now()}`,
+      sender: {
+        name: 'Alex Rivera',
+        email: 'alex@jiosi.online',
+        avatar: 'AR',
+      },
+      recipient: {
+        name: to ? to.split('@')[0] : 'Unspecified',
+        email: to || 'draft@jiosi.online',
+      },
+      subject: subject || '(No subject)',
+      snippet: body.slice(0, 90) || 'Empty draft message...',
+      body,
+      timestamp: 'Just now',
+      date: 'Today',
+      isUnread: false,
+      isStarred: false,
+      isNeedsReply: false,
+      isDraft: true,
+      lastEdited: 'Just now',
+      tags: ['Draft'],
+    };
+
+    setEmails((prev) => [draftThread, ...prev]);
+    showToast('Draft saved successfully.', 'info');
+  };
+
+  const handleOpenSettings = (tab: string = 'general') => {
+    setSettingsTab(tab as SettingsTab);
+    setCurrentView('settings');
   };
 
   // Keyboard navigation shortcuts (Linear / Superhuman style)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is inside an input or textarea
+      // Ignore if user is inside an input, textarea, or contentEditable
       if (
         document.activeElement?.tagName === 'INPUT' ||
         document.activeElement?.tagName === 'TEXTAREA'
@@ -206,15 +348,23 @@ export const App: React.FC = () => {
           e.preventDefault();
           handleArchive(selectedEmailId);
         }
+      } else if (e.key === 's' || e.key === 'S') {
+        if (selectedEmailId) {
+          e.preventDefault();
+          handleToggleStar(selectedEmailId);
+        }
+      } else if (e.key === 'h' || e.key === 'H') {
+        if (selectedEmailId) {
+          e.preventDefault();
+          handleSnooze(selectedEmailId, 'Tomorrow, 9:00 AM');
+        }
       } else if (e.key === 'j' || e.key === 'ArrowDown') {
-        // Navigate to next email
         e.preventDefault();
         const currentIndex = filteredEmails.findIndex((m) => m.id === selectedEmailId);
         if (currentIndex < filteredEmails.length - 1) {
           handleSelectEmail(filteredEmails[currentIndex + 1].id);
         }
       } else if (e.key === 'k' || e.key === 'ArrowUp') {
-        // Navigate to previous email
         e.preventDefault();
         const currentIndex = filteredEmails.findIndex((m) => m.id === selectedEmailId);
         if (currentIndex > 0) {
@@ -225,7 +375,14 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [filteredEmails, selectedEmailId, handleSelectEmail]);
+  }, [
+    filteredEmails,
+    selectedEmailId,
+    handleSelectEmail,
+    handleArchive,
+    handleToggleStar,
+    handleSnooze,
+  ]);
 
   return (
     <>
@@ -235,9 +392,12 @@ export const App: React.FC = () => {
             currentFolder={currentFolder}
             onSelectFolder={(f) => {
               setCurrentFolder(f);
+              setCurrentView('mail');
               setSelectedIds(new Set());
+              setIsMobileDetailOpen(false);
             }}
             onOpenCompose={() => setIsComposeOpen(true)}
+            onOpenSettings={handleOpenSettings}
             folderCounts={folderCounts}
             isOpenMobile={isMobileMenuOpen}
             onCloseMobile={() => setIsMobileMenuOpen(false)}
@@ -249,11 +409,27 @@ export const App: React.FC = () => {
             onSearchChange={setSearchQuery}
             onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
             onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            isDark={isDark}
+            onToggleTheme={toggleTheme}
+            onOpenSettings={handleOpenSettings}
+            onSignOut={() => showToast('Session locked. Reconnect to resume.', 'info')}
           />
+        }
+        customView={
+          currentView === 'settings' ? (
+            <SettingsView
+              initialTab={settingsTab}
+              onBackToMail={() => setCurrentView('mail')}
+              isDark={isDark}
+              onToggleTheme={toggleTheme}
+              onNotify={showToast}
+            />
+          ) : undefined
         }
         emailList={
           <EmailList
             emails={filteredEmails}
+            currentFolder={currentFolder}
             selectedEmailId={selectedEmailId}
             onSelectEmail={handleSelectEmail}
             currentFilter={currentFilter}
@@ -263,6 +439,8 @@ export const App: React.FC = () => {
             onToggleCheck={handleToggleCheck}
             onToggleSelectAll={handleToggleSelectAll}
             onMarkSelectedAsRead={handleMarkSelectedAsRead}
+            onArchiveSelected={handleArchiveSelected}
+            onToggleStar={handleToggleStar}
           />
         }
         emailDetail={
@@ -270,27 +448,67 @@ export const App: React.FC = () => {
             email={selectedEmail}
             onArchive={handleArchive}
             onDelete={handleDelete}
+            onToggleStar={handleToggleStar}
+            onSnooze={handleSnooze}
+            onUnsnooze={handleUnsnooze}
+            onSendReply={handleSendEmail}
+            onBackToList={() => setIsMobileDetailOpen(false)}
+            onNotify={showToast}
           />
         }
+        mobileNavigation={
+          currentView === 'mail' ? (
+            <MobileNavigation
+              currentFolder={currentFolder}
+              onSelectFolder={(f) => {
+                setCurrentFolder(f);
+                setIsMobileDetailOpen(false);
+              }}
+              onOpenCompose={() => setIsComposeOpen(true)}
+              onToggleMenu={() => setIsMobileMenuOpen(true)}
+              needsReplyCount={folderCounts['needs-reply'].total}
+              unreadCount={folderCounts.inbox.unread}
+            />
+          ) : undefined
+        }
+        isMobileDetailOpen={isMobileDetailOpen}
       />
 
-      {/* Compose Email Modal */}
+      {/* Screen 2: Compose Email Modal */}
       <ComposeModal
         isOpen={isComposeOpen}
         onClose={() => setIsComposeOpen(false)}
         onSend={handleSendEmail}
+        onSaveDraft={handleSaveDraft}
       />
 
-      {/* Command Palette (⌘K) */}
+      {/* Screen 3: Global Command Palette */}
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
-        onSelectFolder={(folder) => {
-          setCurrentFolder(folder);
-          setSelectedIds(new Set());
+        onSelectFolder={(f) => {
+          setCurrentFolder(f);
+          setCurrentView('mail');
+          setIsMobileDetailOpen(false);
         }}
         onOpenCompose={() => setIsComposeOpen(true)}
+        onOpenSettings={handleOpenSettings}
+        onToggleTheme={toggleTheme}
+        emails={emails}
+        onSelectEmail={(id) => {
+          setCurrentView('mail');
+          handleSelectEmail(id);
+        }}
       />
+
+      {/* Toast Feedback */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </>
   );
 };

@@ -4,16 +4,14 @@ import { Button } from '../ui/Button';
 import { HealthBadge } from '../ui/HealthBadge';
 import {
   Inbox,
-  AlertCircle,
-  Clock,
   Send,
-  Search,
+  Star,
+  Clock,
+  SendHorizontal,
+  FileEdit,
   Plus,
   Settings,
-  ShieldCheck,
-  BarChart3,
-  ChevronDown,
-  Tag,
+  Link2,
   X
 } from 'lucide-react';
 
@@ -21,7 +19,8 @@ interface SidebarProps {
   currentFolder: EmailFolder;
   onSelectFolder: (folder: EmailFolder) => void;
   onOpenCompose: () => void;
-  folderCounts: Record<EmailFolder, { total: number; unread: number }>;
+  onOpenSettings: (tab?: string) => void;
+  folderCounts: Record<EmailFolder, { total: number; unread?: number }>;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
 }
@@ -30,16 +29,58 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentFolder,
   onSelectFolder,
   onOpenCompose,
+  onOpenSettings,
   folderCounts,
   isOpenMobile = false,
   onCloseMobile,
 }) => {
-  const navItems: { id: EmailFolder; label: string; icon: React.ReactNode }[] = [
-    { id: 'inbox', label: 'Inbox', icon: <Inbox className="w-4 h-4 stroke-[1.75]" /> },
-    { id: 'important', label: 'Important', icon: <AlertCircle className="w-4 h-4 stroke-[1.75]" /> },
-    { id: 'needs-reply', label: 'Needs Reply', icon: <Send className="w-4 h-4 stroke-[1.75]" /> },
-    { id: 'follow-ups', label: 'Follow-ups', icon: <Clock className="w-4 h-4 stroke-[1.75]" /> },
-    { id: 'search', label: 'Search / All', icon: <Search className="w-4 h-4 stroke-[1.75]" /> },
+  const navItems: {
+    id: EmailFolder;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    isUrgentAction?: boolean;
+    badgeCount?: number;
+    colorClass?: string;
+  }[] = [
+    {
+      id: 'inbox',
+      label: 'Inbox',
+      icon: Inbox,
+      badgeCount: folderCounts.inbox?.unread ?? 0,
+    },
+    {
+      id: 'needs-reply',
+      label: 'Needs Reply',
+      icon: Send,
+      isUrgentAction: true,
+      badgeCount: folderCounts['needs-reply']?.total ?? 0,
+      colorClass: 'text-red-500',
+    },
+    {
+      id: 'starred',
+      label: 'Starred',
+      icon: Star,
+      badgeCount: folderCounts.starred?.total ?? 0,
+      colorClass: 'text-amber-500',
+    },
+    {
+      id: 'snoozed',
+      label: 'Snoozed',
+      icon: Clock,
+      badgeCount: folderCounts.snoozed?.total ?? 0,
+    },
+    {
+      id: 'sent',
+      label: 'Sent',
+      icon: SendHorizontal,
+      badgeCount: folderCounts.sent?.total ?? 0,
+    },
+    {
+      id: 'drafts',
+      label: 'Drafts',
+      icon: FileEdit,
+      badgeCount: folderCounts.drafts?.total ?? 0,
+    },
   ];
 
   return (
@@ -47,28 +88,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile backdrop */}
       {isOpenMobile && (
         <div
-          className="fixed inset-0 bg-ink-primary/20 backdrop-blur-xs z-30 lg:hidden"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 lg:hidden"
           onClick={onCloseMobile}
         />
       )}
 
       <aside
-        className={`fixed lg:static top-0 bottom-0 left-0 z-40 w-64 bg-canvas-alt border-r border-border-subtle flex flex-col justify-between transition-transform duration-200 ease-in-out ${
+        className={`fixed lg:static top-0 bottom-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between transition-transform duration-200 ease-in-out select-none ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        {/* Top: Brand & Workspace */}
-        <div className="p-4 space-y-4">
+        {/* Top: Brand, Workspace & Compose */}
+        <div className="p-4 space-y-3.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded bg-ink-primary flex items-center justify-center text-canvas font-mono font-bold text-xs tracking-wider">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white font-mono font-bold text-xs tracking-wider shadow-sm">
                 JI
               </div>
               <div>
-                <h1 className="text-sm font-semibold tracking-tight text-ink-primary flex items-center gap-1">
+                <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                   JIOSI Inbox
-                  <span className="text-[10px] font-mono font-normal text-ink-muted px-1.5 py-0.2 bg-canvas-surface rounded border border-border-subtle">
-                    v0.1
+                  <span className="text-[10px] font-mono font-medium text-brand-600 dark:text-brand-400 px-1.5 py-0.2 bg-brand-50 dark:bg-brand-950/60 rounded border border-brand-200 dark:border-brand-800">
+                    AI
                   </span>
                 </h1>
               </div>
@@ -77,7 +118,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {onCloseMobile && (
               <button
                 onClick={onCloseMobile}
-                className="lg:hidden p-1 text-ink-muted hover:text-ink-primary"
+                className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-md"
+                aria-label="Close navigation"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -85,113 +127,109 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Workspace Pill */}
-          <button className="w-full flex items-center justify-between px-2.5 py-1.5 rounded border border-border-subtle bg-white hover:bg-canvas-surface text-left transition-colors">
+          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-left">
             <div className="flex items-center gap-2 overflow-hidden">
-              <div className="w-5 h-5 rounded-full bg-brand-sageLight text-brand-sage flex items-center justify-center font-mono text-[10px] font-medium">
+              <div className="w-5 h-5 rounded-full bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300 flex items-center justify-center font-mono text-[10px] font-semibold">
                 A
               </div>
-              <span className="text-xs font-medium text-ink-primary truncate">
+              <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
                 alex@jiosi.online
               </span>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-ink-muted shrink-0" />
-          </button>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" title="Connected" />
+          </div>
 
-          {/* High-Contrast Compose Action */}
+          {/* High-Contrast Compose Action with Purple Brand Style */}
           <Button
-            variant="primary"
-            className="w-full justify-between shadow-subtle"
-            icon={<Plus className="w-4 h-4 stroke-[2]" />}
-            shortcut="C"
+            variant="brand"
+            size="md"
             onClick={onOpenCompose}
+            icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
+            shortcut="C"
+            className="w-full justify-between shadow-xs font-medium"
           >
-            Compose
+            New Message
           </Button>
 
-          {/* Primary Navigation */}
-          <nav className="space-y-0.5 pt-2">
-            <p className="px-2.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-ink-subtle">
-              Navigation
-            </p>
+          {/* Primary Navigation List */}
+          <nav className="space-y-1 pt-1" aria-label="Mailbox folders">
             {navItems.map((item) => {
-              const active = currentFolder === item.id;
-              const count = folderCounts[item.id];
+              const Icon = item.icon;
+              const isActive = currentFolder === item.id;
+              const isUrgent = item.isUrgentAction && (item.badgeCount ?? 0) > 0;
+
               return (
                 <button
                   key={item.id}
                   onClick={() => {
                     onSelectFolder(item.id);
-                    onCloseMobile?.();
+                    if (onCloseMobile) onCloseMobile();
                   }}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs transition-colors ${
-                    active
-                      ? 'bg-canvas-focus text-ink-primary font-medium'
-                      : 'text-ink-secondary hover:bg-canvas-surface'
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 font-semibold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className={active ? 'text-ink-primary' : 'text-ink-muted'}>
-                      {item.icon}
-                    </span>
+                    <Icon
+                      className={`w-4 h-4 stroke-[1.75] ${
+                        isActive
+                          ? 'text-brand-600 dark:text-brand-400'
+                          : isUrgent
+                          ? 'text-red-500'
+                          : item.colorClass || 'text-slate-400 dark:text-slate-500'
+                      }`}
+                    />
                     <span>{item.label}</span>
                   </div>
-                  {count && count.total > 0 && (
-                    <div className="flex items-center gap-1.5">
-                      {count.unread > 0 && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-ink-primary" />
-                      )}
-                      <span className="font-mono text-[11px] text-ink-muted">
-                        {count.total}
-                      </span>
-                    </div>
+
+                  {/* Red Action Indicator for Needs Reply vs Neutral for unread */}
+                  {item.badgeCount !== undefined && item.badgeCount > 0 && (
+                    <span
+                      className={`font-mono text-[10px] px-1.5 py-0.2 rounded-full font-semibold transition-all ${
+                        isUrgent
+                          ? 'bg-red-500 text-white shadow-xs'
+                          : isActive
+                          ? 'bg-brand-200 dark:bg-brand-900 text-brand-800 dark:text-brand-200'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      {item.badgeCount}
+                    </span>
                   )}
                 </button>
               );
             })}
           </nav>
-
-          {/* Secondary Labels / Quick filters */}
-          <div className="space-y-0.5 pt-2">
-            <p className="px-2.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-ink-subtle">
-              Quick Tags
-            </p>
-            <div className="flex flex-col space-y-0.5 text-xs text-ink-muted">
-              <span className="flex items-center gap-2 px-2.5 py-1 rounded hover:bg-canvas-surface cursor-pointer">
-                <Tag className="w-3.5 h-3.5 text-brand-amber" /> Fundraising
-              </span>
-              <span className="flex items-center gap-2 px-2.5 py-1 rounded hover:bg-canvas-surface cursor-pointer">
-                <Tag className="w-3.5 h-3.5 text-brand-sage" /> Design
-              </span>
-              <span className="flex items-center gap-2 px-2.5 py-1 rounded hover:bg-canvas-surface cursor-pointer">
-                <Tag className="w-3.5 h-3.5 text-brand-slate" /> Finance
-              </span>
-            </div>
-          </div>
         </div>
 
-        {/* Bottom: Telemetry, Accounts & Settings */}
-        <div className="p-4 border-t border-border-subtle space-y-3">
+        {/* Bottom Sidebar: Settings, Connected Accounts & System Health */}
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-3 bg-slate-50/50 dark:bg-slate-900/30">
           <div className="space-y-1">
-            <button className="w-full flex items-center gap-2 px-2 py-1 text-xs text-ink-secondary hover:bg-canvas-surface rounded transition-colors">
-              <ShieldCheck className="w-3.5 h-3.5 text-ink-muted" />
-              <span>Connected Accounts</span>
+            <button
+              onClick={() => onOpenSettings('accounts')}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Link2 className="w-3.5 h-3.5 text-slate-400" />
+                <span>Connected Accounts</span>
+              </div>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             </button>
-            <button className="w-full flex items-center gap-2 px-2 py-1 text-xs text-ink-secondary hover:bg-canvas-surface rounded transition-colors">
-              <BarChart3 className="w-3.5 h-3.5 text-ink-muted" />
-              <span>Productivity Analytics</span>
-            </button>
-            <button className="w-full flex items-center gap-2 px-2 py-1 text-xs text-ink-secondary hover:bg-canvas-surface rounded transition-colors">
-              <Settings className="w-3.5 h-3.5 text-ink-muted" />
-              <span>Settings</span>
+
+            <button
+              onClick={() => onOpenSettings('general')}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Settings className="w-3.5 h-3.5 text-slate-400" />
+                <span>Settings</span>
+              </div>
             </button>
           </div>
 
-          <div className="pt-2 border-t border-border-subtle flex flex-col gap-1.5">
-            <div className="flex items-center justify-between text-[11px] text-ink-muted font-mono">
-              <span>Inbox Zero Avg:</span>
-              <span className="text-ink-primary font-medium">18m</span>
-            </div>
-            {/* Live API Health Monitor */}
+          <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
             <HealthBadge />
           </div>
         </div>
