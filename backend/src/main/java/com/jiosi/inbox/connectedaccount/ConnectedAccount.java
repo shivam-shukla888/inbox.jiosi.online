@@ -25,6 +25,10 @@ public class ConnectedAccount {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workspace_id")
+    private com.jiosi.inbox.workspace.Workspace workspace;
+
     @NotBlank
     @Column(nullable = false, length = 50)
     private String provider;
@@ -63,6 +67,9 @@ public class ConnectedAccount {
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+
+    public com.jiosi.inbox.workspace.Workspace getWorkspace() { return workspace; }
+    public void setWorkspace(com.jiosi.inbox.workspace.Workspace workspace) { this.workspace = workspace; }
 
     public String getProvider() { return provider; }
     public void setProvider(String provider) { this.provider = provider; }

@@ -300,7 +300,8 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
         <div className="p-3 rounded-xl bg-brand-50/50 dark:bg-slate-800/60 border border-brand-100 dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-1.5 text-xs font-medium text-brand-900 dark:text-brand-200">
             <Sparkles className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-            <span>AI Productivity Tools:</span>
+            <span>AI Productivity Tools</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-brand-100/70 text-brand-700 dark:bg-slate-700 dark:text-slate-300 font-normal">Prototype</span>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">

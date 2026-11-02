@@ -32,7 +32,7 @@ public class CorsConfig {
 
         log.info("Configuring CORS allowed origins: {}", origins);
         config.setAllowedOrigins(origins);
-        config.setAllowedHeaders(List.of("Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"));
+        config.setAllowedHeaders(List.of("Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With", "X-Workspace-Id"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setExposedHeaders(List.of("X-Total-Count", "Link"));
         config.setMaxAge(3600L);
