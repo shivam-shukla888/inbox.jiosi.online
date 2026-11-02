@@ -102,16 +102,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-4 space-y-3.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white font-mono font-bold text-xs tracking-wider shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white font-mono font-bold text-xs tracking-wider shadow-sm shrink-0">
                 JI
               </div>
               <div>
-                <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-1.5 leading-tight">
                   JIOSI Inbox
                   <span className="text-[10px] font-mono font-medium text-brand-600 dark:text-brand-400 px-1.5 py-0.2 bg-brand-50 dark:bg-brand-950/60 rounded border border-brand-200 dark:border-brand-800">
                     AI
                   </span>
                 </h1>
+                <span className="block text-[10px] font-normal text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+                  by Shivsastra
+                </span>
               </div>
             </div>
 

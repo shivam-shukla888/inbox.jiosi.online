@@ -27,3 +27,4 @@ public final class UserContext {
         CURRENT_WORKSPACE_ROLE.remove();
     }
 }
+

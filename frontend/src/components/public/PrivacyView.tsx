@@ -28,7 +28,7 @@ export const PrivacyView: React.FC<PrivacyViewProps> = ({ onBack }) => {
             </h1>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            JIOSI Inbox is designed with privacy-first principles. This document outlines how your data is handled, stored, and protected.
+            JIOSI Inbox by Shivsastra is designed with privacy-first principles. This document outlines how your data is handled, stored, and protected.
           </p>
         </div>
 
@@ -116,10 +116,10 @@ export const PrivacyView: React.FC<PrivacyViewProps> = ({ onBack }) => {
 
         {/* Section 6: Contact */}
         <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 space-y-1">
-          <p>Questions regarding privacy practices can be addressed to: <span className="font-mono text-brand-600 dark:text-brand-400">privacy@jiosi.online</span></p>
-          <p>Product: JIOSI Inbox · Company: JIOSI AI ([OWNER CONFIRMATION REQUIRED: Registered Corporate Entity Name & Jurisdiction])</p>
+          <p>Product: JIOSI Inbox · Brand Attribution: by Shivsastra · Publisher: Shivsastra · <span className="font-mono text-brand-600 dark:text-brand-400">privacy@jiosi.online</span></p>
         </div>
       </div>
     </div>
   );
 };
+

@@ -49,7 +49,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onBack }) => {
             </h1>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Assistance, guides, and diagnostic tools for JIOSI Inbox.
+            Assistance, guides, and diagnostic tools for JIOSI Inbox by Shivsastra.
           </p>
         </div>
 
@@ -144,7 +144,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onBack }) => {
         </div>
 
         <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500">
-          JIOSI Inbox · Version 0.1.0-alpha · Powered by Spring Boot & React
+          JIOSI Inbox by Shivsastra · Version 0.1.0-alpha · Powered by Spring Boot & React
         </div>
       </div>
     </div>

@@ -1,12 +1,15 @@
-# JIOSI Inbox robots.txt
+# JIOSI Inbox by Shivsastra robots.txt
 # Disallow search engine indexing of private authenticated inbox routes
 User-agent: *
 Allow: /
+Allow: /overview
 Allow: /privacy
 Allow: /terms
 Allow: /support
 Disallow: /inbox
 Disallow: /api/
 Disallow: /mail
+Disallow: /settings
+Disallow: /connected-accounts
 
 Sitemap: https://inbox.jiosi.online/sitemap.xml

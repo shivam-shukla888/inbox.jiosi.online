@@ -99,10 +99,15 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({
                 </p>
               </div>
             </div>
-            <div className="mt-2.5 flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
-              <Shield className="w-3 h-3 text-brand-500" />
-              <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300">
-                Workspace Admin · Team Tier
+            <div className="mt-2.5 flex items-center justify-between px-2 py-1 rounded-md bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-1.5">
+                <Shield className="w-3 h-3 text-brand-500" />
+                <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                  Workspace Admin · Team Tier
+                </span>
+              </div>
+              <span className="text-[9px] font-normal text-slate-400 dark:text-slate-500">
+                by Shivsastra
               </span>
             </div>
           </div>

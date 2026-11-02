@@ -12,6 +12,7 @@ import { PrivacyView } from './components/public/PrivacyView';
 import { TermsView } from './components/public/TermsView';
 import { SupportView } from './components/public/SupportView';
 import { PublicProductLanding } from './components/public/PublicProductLanding';
+import { SignInModal } from './components/auth/SignInModal';
 import { Toast, ToastType } from './components/ui/Toast';
 import { apiClient, FolderCountsData } from './api/client';
 import { DEMO_EMAILS } from './data/mockEmails';
@@ -68,6 +69,7 @@ export const App: React.FC = () => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
 
   // Toast feedback state
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -80,19 +82,19 @@ export const App: React.FC = () => {
   useEffect(() => {
     const metaRobots = document.getElementById('meta-robots');
     if (currentView === 'mail' || currentView === 'settings' || currentView === 'connected-accounts') {
-      document.title = 'JIOSI Inbox — Read less. Understand faster. Respond smarter.';
+      document.title = 'JIOSI Inbox by Shivsastra | Intelligent Email Workspace';
       if (metaRobots) metaRobots.setAttribute('content', 'noindex, nofollow');
     } else if (currentView === 'privacy') {
-      document.title = 'Privacy Policy — JIOSI Inbox';
+      document.title = 'Privacy Policy — JIOSI Inbox by Shivsastra';
       if (metaRobots) metaRobots.setAttribute('content', 'index, follow');
     } else if (currentView === 'terms') {
-      document.title = 'Terms of Service — JIOSI Inbox';
+      document.title = 'Terms of Service — JIOSI Inbox by Shivsastra';
       if (metaRobots) metaRobots.setAttribute('content', 'index, follow');
     } else if (currentView === 'support') {
-      document.title = 'Help & Support — JIOSI Inbox';
+      document.title = 'Help & Support — JIOSI Inbox by Shivsastra';
       if (metaRobots) metaRobots.setAttribute('content', 'index, follow');
     } else if (currentView === 'landing') {
-      document.title = 'JIOSI Inbox — Intelligent Email Management';
+      document.title = 'JIOSI Inbox by Shivsastra | Intelligent Email Workspace';
       if (metaRobots) metaRobots.setAttribute('content', 'index, follow');
     }
   }, [currentView]);
@@ -644,7 +646,7 @@ export const App: React.FC = () => {
             isDark={isDark}
             onToggleTheme={toggleTheme}
             onOpenSettings={handleOpenSettings}
-            onSignOut={() => showToast('Session locked. Reconnect to resume.', 'info')}
+            onSignOut={() => setIsSignInOpen(true)}
             onOpenLanding={() => setCurrentView('landing')}
             onOpenPrivacy={() => setCurrentView('privacy')}
             onOpenTerms={() => setCurrentView('terms')}
@@ -794,6 +796,22 @@ export const App: React.FC = () => {
         onSelectEmail={(id) => {
           setCurrentView('mail');
           handleSelectEmail(id);
+        }}
+      />
+
+      {/* Sign In Dialog */}
+      <SignInModal
+        isOpen={isSignInOpen}
+        onClose={() => setIsSignInOpen(false)}
+        onSignIn={async (email) => {
+          await apiClient.initAuth(email);
+          await loadThreads(currentFolder, currentFilter);
+          showToast(`Signed in as ${email}`, 'success');
+        }}
+        onExploreDemo={() => {
+          setEmails(DEMO_EMAILS);
+          setIsDemoMode(true);
+          showToast('Simulation preview active', 'info');
         }}
       />
 

@@ -20,15 +20,22 @@ export const PublicProductLanding: React.FC<PublicProductLandingProps> = ({
       {/* Top Navigation */}
       <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur sticky top-0 z-30 px-4 sm:px-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold text-sm tracking-wider shadow-sm">
+          <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold text-sm tracking-wider shadow-sm shrink-0">
             JI
           </div>
-          <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">
-            JIOSI Inbox
-          </span>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200 dark:border-brand-900/60">
-            SaaS v0.1
-          </span>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white leading-tight">
+                JIOSI Inbox
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200 dark:border-brand-900/60">
+                SaaS v0.1
+              </span>
+            </div>
+            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-none mt-0.5">
+              by Shivsastra
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -46,9 +53,9 @@ export const PublicProductLanding: React.FC<PublicProductLandingProps> = ({
 
       {/* Hero Section */}
       <section className="px-4 sm:px-8 py-16 sm:py-24 max-w-5xl mx-auto text-center space-y-6">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900/60 text-xs font-medium text-indigo-700 dark:text-indigo-300">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900/60 text-xs font-medium text-indigo-700 dark:text-indigo-300">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Next-Generation Intelligent Email Management</span>
+          <span>JIOSI Inbox by Shivsastra · Intelligent Email Workspace</span>
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white max-w-3xl mx-auto leading-tight">
@@ -56,7 +63,7 @@ export const PublicProductLanding: React.FC<PublicProductLandingProps> = ({
         </h1>
 
         <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-          JIOSI Inbox transforms overwhelming message streams into calm, high-velocity workflows. Built on a zero-tracking, multi-tenant architecture designed for professionals and teams.
+          <strong className="font-semibold text-slate-900 dark:text-slate-100">JIOSI Inbox by Shivsastra</strong> transforms overwhelming message streams into calm, high-velocity workflows. Built on a zero-tracking, multi-tenant architecture designed for professionals and teams.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
@@ -111,7 +118,7 @@ export const PublicProductLanding: React.FC<PublicProductLandingProps> = ({
       {/* Footer */}
       <footer className="px-4 sm:px-8 py-8 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          © 2026 JIOSI AI · <a href="https://jiosi.online" target="_blank" rel="noopener noreferrer" className="hover:underline">jiosi.online</a>
+          © 2026 JIOSI Inbox by Shivsastra · <a href="https://jiosi.online" target="_blank" rel="noopener noreferrer" className="hover:underline">jiosi.online</a>
         </div>
         <div className="flex items-center gap-4">
           <button onClick={onOpenPrivacy} className="hover:text-slate-900 dark:hover:text-slate-300 underline">Privacy Policy</button>

@@ -1,7 +1,7 @@
 {
-  "name": "JIOSI Inbox",
-  "short_name": "JIOSI",
-  "description": "Your inbox, intelligently managed. Read less. Understand faster. Respond smarter.",
+  "name": "JIOSI Inbox by Shivsastra",
+  "short_name": "JIOSI Inbox",
+  "description": "JIOSI Inbox by Shivsastra — Your inbox, intelligently managed. Read less. Understand faster. Respond smarter.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0F172A",

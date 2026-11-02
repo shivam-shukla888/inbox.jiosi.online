@@ -1,4 +1,5 @@
 # JIOSI Inbox
+### by Shivsastra
 
 > **Your inbox, intelligently managed.**  
 > *Read less. Understand faster. Respond smarter.*
@@ -11,7 +12,9 @@
 [![Docker Compose](https://img.shields.io/badge/Docker-Ready-2496ed.svg)](https://docker.com)
 [![CI Workflow](https://img.shields.io/badge/CI-GitHub%20Actions-blue.svg)](.github/workflows/ci.yml)
 
-Company: [JIOSI AI](https://jiosi.online)  
+Brand: **Shivsastra**  
+Product: **JIOSI Inbox by Shivsastra**  
+Website: [https://jiosi.online](https://jiosi.online)  
 Application Target: [https://inbox.jiosi.online](https://inbox.jiosi.online)
 
 ---

@@ -27,7 +27,7 @@ export const TermsView: React.FC<TermsViewProps> = ({ onBack }) => {
             </h1>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Please read these Terms of Service carefully before utilizing the JIOSI Inbox platform.
+            Please read these Terms of Service carefully before utilizing the JIOSI Inbox by Shivsastra platform.
           </p>
         </div>
 
@@ -84,9 +84,10 @@ export const TermsView: React.FC<TermsViewProps> = ({ onBack }) => {
 
         <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 space-y-1">
           <p>For questions regarding terms, contact: <span className="font-mono text-brand-600 dark:text-brand-400">legal@jiosi.online</span></p>
-          <p>JIOSI AI · inbox.jiosi.online</p>
+          <p>JIOSI Inbox by Shivsastra · inbox.jiosi.online · Shivsastra</p>
         </div>
       </div>
     </div>
   );
 };
+

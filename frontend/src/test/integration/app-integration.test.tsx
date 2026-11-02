@@ -50,8 +50,9 @@ describe('JIOSI Inbox Application Integration Tests', () => {
   it('renders the complete 3-panel workspace on initial load with real data', async () => {
     render(<App />);
 
-    // 1. Sidebar Brand
-    expect(screen.getByText('JIOSI Inbox')).toBeInTheDocument();
+    // 1. Sidebar Brand & Attribution
+    expect(screen.getAllByText('JIOSI Inbox').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('by Shivsastra').length).toBeGreaterThan(0);
     const newMsgButtons = screen.getAllByRole('button', { name: /new message/i });
     expect(newMsgButtons.length).toBeGreaterThan(0);
 
