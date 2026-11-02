@@ -114,3 +114,4 @@ Colors in JIOSI Inbox are strictly functional and communicate clear, distinct st
    - 2-panel collapsible: Left Sidebar collapses into a slide-over drawer; Email List (`380px`) + Reading Pane (`flex-1`).
 3. **Mobile (`< 768px`)**:
    - Single-pane drilldown: Shows full-width Email List with Bottom Navigation bar; clicking any thread slides into a full-screen Reading Pane with a prominent "Back to List" navigation button. Floating Compose FAB (`bottom-20 right-4`).
+
