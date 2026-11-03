@@ -3,6 +3,12 @@ server:
   compression:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json
+  servlet:
+    session:
+      timeout: 3600s
+      cookie:
+        http-only: true
+        same-site: lax
 
 spring:
   application:
