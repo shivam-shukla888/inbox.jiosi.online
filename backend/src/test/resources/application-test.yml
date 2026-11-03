@@ -9,6 +9,17 @@ spring:
       ddl-auto: create-drop
   flyway:
     enabled: false
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-google-client-id
+            client-secret: test-google-client-secret
+            scope:
+              - openid
+              - profile
+              - email
 
 logging:
   level:
@@ -16,6 +27,10 @@ logging:
     com.jiosi.inbox: INFO
 
 app:
+  frontend-url: http://localhost:3000
+  google:
+    client-id: test-google-client-id
   security:
     enabled: true
     jwt-secret: jiosi_test_hmac_secret_key_minimum_32_bytes_long
+    jwt-expiration-seconds: 3600

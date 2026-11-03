@@ -14,7 +14,7 @@ import { SupportView } from './components/public/SupportView';
 import { PublicProductLanding } from './components/public/PublicProductLanding';
 import { SignInModal } from './components/auth/SignInModal';
 import { Toast, ToastType } from './components/ui/Toast';
-import { apiClient, FolderCountsData } from './api/client';
+import { apiClient, FolderCountsData, AuthSessionData } from './api/client';
 import { DEMO_EMAILS } from './data/mockEmails';
 import {
   EmailThread,
@@ -70,6 +70,8 @@ export const App: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AuthSessionData | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Toast feedback state
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -99,14 +101,28 @@ export const App: React.FC = () => {
     }
   }, [currentView]);
 
-  // Initial Route Check (support direct links to public docs/legal)
+  // Initial Route & OAuth Callback Check
   useEffect(() => {
+    apiClient.setOnUnauthorized(() => {
+      setCurrentUser(null);
+      setIsSignInOpen(true);
+    });
+    apiClient.fetchCsrf();
+
     if (typeof window !== 'undefined' && window.location) {
       const p = window.location.pathname;
       if (p === '/privacy') setCurrentView('privacy');
       else if (p === '/terms') setCurrentView('terms');
       else if (p === '/support') setCurrentView('support');
       else if (p === '/overview') setCurrentView('landing');
+
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get('auth_error');
+      if (err) {
+        setAuthError(decodeURIComponent(err));
+        setIsSignInOpen(true);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
     }
   }, []);
 
@@ -120,9 +136,10 @@ export const App: React.FC = () => {
 
     try {
       // 1. Ensure authenticated session exists
-      if (!apiClient.getAuthToken()) {
+      if (!apiClient.getAuthToken() && !currentUser) {
         try {
-          await apiClient.initAuth();
+          const user = await apiClient.initAuth();
+          setCurrentUser(user);
         } catch {
           // If auth endpoint unavailable, proceed to fetch attempt
         }
@@ -632,6 +649,18 @@ export const App: React.FC = () => {
     handleSnooze,
   ]);
 
+  const handleSignOut = async () => {
+    try {
+      await apiClient.logout();
+    } catch {
+      // ignore
+    }
+    setCurrentUser(null);
+    setEmails([]);
+    setIsSignInOpen(true);
+    showToast('Signed out successfully', 'info');
+  };
+
   return (
     <>
       <AppShell
@@ -661,7 +690,8 @@ export const App: React.FC = () => {
             isDark={isDark}
             onToggleTheme={toggleTheme}
             onOpenSettings={handleOpenSettings}
-            onSignOut={() => setIsSignInOpen(true)}
+            onSignOut={handleSignOut}
+            user={currentUser}
             onOpenLanding={() => setCurrentView('landing')}
             onOpenPrivacy={() => setCurrentView('privacy')}
             onOpenTerms={() => setCurrentView('terms')}
@@ -818,10 +848,9 @@ export const App: React.FC = () => {
       <SignInModal
         isOpen={isSignInOpen}
         onClose={() => setIsSignInOpen(false)}
-        onSignIn={async (email) => {
-          await apiClient.initAuth(email);
-          await loadThreads(currentFolder, currentFilter);
-          showToast(`Signed in as ${email}`, 'success');
+        authError={authError}
+        onGoogleSignIn={() => {
+          window.location.href = apiClient.getGoogleOAuthUrl();
         }}
         onExploreDemo={() => {
           setEmails(DEMO_EMAILS);

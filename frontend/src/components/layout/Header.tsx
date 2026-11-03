@@ -19,6 +19,12 @@ interface HeaderProps {
   onOpenTerms?: () => void;
   onOpenSupport?: () => void;
   isDemoMode?: boolean;
+  user?: {
+    fullName: string;
+    email: string;
+    avatarUrl?: string;
+    role?: string;
+  } | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -36,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTerms,
   onOpenSupport,
   isDemoMode = false,
+  user,
 }) => {
   return (
     <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 flex items-center justify-between gap-3 shrink-0 z-20">
@@ -128,6 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
           onOpenPrivacy={onOpenPrivacy}
           onOpenTerms={onOpenTerms}
           onOpenSupport={onOpenSupport}
+          user={user}
         />
       </div>
     </header>
