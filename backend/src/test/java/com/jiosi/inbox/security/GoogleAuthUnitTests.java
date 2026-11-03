@@ -182,5 +182,59 @@ class GoogleAuthUnitTests {
         assertThrows(UnauthorizedException.class, () ->
                 authTokenService.validateAndExtractUserId("Bearer dev-token-" + existingUser.getId()));
     }
+
+    @Test
+    void testOAuthConfigValidator_MissingClientId_ThrowsIllegalState() {
+        org.springframework.mock.env.MockEnvironment prodEnv = new org.springframework.mock.env.MockEnvironment();
+        prodEnv.setActiveProfiles("prod");
+        com.jiosi.inbox.config.OAuthConfigValidator validator =
+                new com.jiosi.inbox.config.OAuthConfigValidator("", "secret-123", prodEnv);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, validator::run);
+        assertTrue(ex.getMessage().contains("GOOGLE_CLIENT_ID is missing or invalid"));
+    }
+
+    @Test
+    void testOAuthConfigValidator_PlaceholderClientId_ThrowsIllegalState() {
+        org.springframework.mock.env.MockEnvironment prodEnv = new org.springframework.mock.env.MockEnvironment();
+        prodEnv.setActiveProfiles("prod");
+        com.jiosi.inbox.config.OAuthConfigValidator validator =
+                new com.jiosi.inbox.config.OAuthConfigValidator("google-client-id-placeholder", "secret-123", prodEnv);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, validator::run);
+        assertTrue(ex.getMessage().contains("GOOGLE_CLIENT_ID is missing or invalid"));
+    }
+
+    @Test
+    void testOAuthConfigValidator_MissingClientSecret_ThrowsIllegalState() {
+        org.springframework.mock.env.MockEnvironment prodEnv = new org.springframework.mock.env.MockEnvironment();
+        prodEnv.setActiveProfiles("prod");
+        com.jiosi.inbox.config.OAuthConfigValidator validator =
+                new com.jiosi.inbox.config.OAuthConfigValidator("client-id-123", "", prodEnv);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, validator::run);
+        assertTrue(ex.getMessage().contains("GOOGLE_CLIENT_SECRET is missing or invalid"));
+    }
+
+    @Test
+    void testOAuthConfigValidator_PlaceholderSecret_ThrowsIllegalState() {
+        org.springframework.mock.env.MockEnvironment prodEnv = new org.springframework.mock.env.MockEnvironment();
+        prodEnv.setActiveProfiles("prod");
+        com.jiosi.inbox.config.OAuthConfigValidator validator =
+                new com.jiosi.inbox.config.OAuthConfigValidator("client-id-123", "google-client-secret-placeholder", prodEnv);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, validator::run);
+        assertTrue(ex.getMessage().contains("GOOGLE_CLIENT_SECRET is missing or invalid"));
+    }
+
+    @Test
+    void testOAuthConfigValidator_ValidCredentials_Passes() {
+        org.springframework.mock.env.MockEnvironment prodEnv = new org.springframework.mock.env.MockEnvironment();
+        prodEnv.setActiveProfiles("prod");
+        com.jiosi.inbox.config.OAuthConfigValidator validator =
+                new com.jiosi.inbox.config.OAuthConfigValidator("540933255986-test.apps.googleusercontent.com", "GOCSPX-valid-secret", prodEnv);
+
+        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) () -> validator.run(null));
+    }
 }
 

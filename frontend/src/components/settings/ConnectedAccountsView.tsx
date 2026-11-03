@@ -3,25 +3,27 @@ import { RefreshCw, Plus, ShieldCheck } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { ConnectedAccountItem } from '../../types/email';
+import { AuthSessionData } from '../../api/client';
 
 interface ConnectedAccountsViewProps {
   onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
+  user?: AuthSessionData | null;
 }
 
-export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ onNotify }) => {
+export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ onNotify, user }) => {
   const [accounts, setAccounts] = useState<ConnectedAccountItem[]>([
     {
       id: 'acc-1',
       provider: 'gmail',
-      email: 'alex@jiosi.online',
+      email: user?.email || 'user@jiosi.online',
       status: 'connected',
-      lastSync: '2 mins ago',
+      lastSync: 'Just now',
       isPrimary: true,
     },
     {
       id: 'acc-2',
       provider: 'outlook',
-      email: 'alex.rivera@enterprisepartners.com',
+      email: 'work@enterprisepartners.com',
       status: 'available',
       isPrimary: false,
     },

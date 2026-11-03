@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SignInModal } from '../../components/auth/SignInModal';
+import { AuthPage } from '../../components/auth/AuthPage';
 import { ProfileMenu } from '../../components/profile/ProfileMenu';
 import { apiClient } from '../../api/client';
 
@@ -88,6 +89,73 @@ describe('Authentication Components & Google OIDC Tests', () => {
     });
   });
 
+  describe('AuthPage (Full-Screen Authentication Gate)', () => {
+    it('renders the complete premium auth screen with branding and value pillars', () => {
+      render(
+        <AuthPage
+          onGoogleSignIn={vi.fn()}
+          onExploreDemo={vi.fn()}
+        />
+      );
+
+      expect(screen.getAllByText('JIOSI Inbox').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('by Shivsastra').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Your inbox,')).toBeInTheDocument();
+      expect(screen.getByText('intelligently organized.')).toBeInTheDocument();
+      expect(screen.getByText('One Focused Workspace')).toBeInTheDocument();
+      expect(screen.getByText('Clear Email Priorities')).toBeInTheDocument();
+      expect(screen.getByText('Secure Account Access')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /explore in simulation preview/i })).toBeInTheDocument();
+      expect(screen.getAllByText(/Google OpenID Connect/i).length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('triggers onGoogleSignIn when Continue with Google is clicked', () => {
+      const handleGoogle = vi.fn();
+      render(
+        <AuthPage
+          onGoogleSignIn={handleGoogle}
+          onExploreDemo={vi.fn()}
+        />
+      );
+
+      const googleBtn = screen.getByRole('button', { name: /continue with google/i });
+      fireEvent.click(googleBtn);
+      expect(handleGoogle).toHaveBeenCalledTimes(1);
+    });
+
+    it('displays error banner with dismiss action when error is provided', () => {
+      const handleClear = vi.fn();
+      render(
+        <AuthPage
+          onGoogleSignIn={vi.fn()}
+          onExploreDemo={vi.fn()}
+          error="OAuth client configuration is invalid"
+          onClearError={handleClear}
+        />
+      );
+
+      expect(screen.getByText('OAuth client configuration is invalid')).toBeInTheDocument();
+      const dismissBtn = screen.getByText('Dismiss and retry');
+      fireEvent.click(dismissBtn);
+      expect(handleClear).toHaveBeenCalledTimes(1);
+    });
+
+    it('triggers onExploreDemo when clicking Explore in Simulation Preview', () => {
+      const handleDemo = vi.fn();
+      render(
+        <AuthPage
+          onGoogleSignIn={vi.fn()}
+          onExploreDemo={handleDemo}
+        />
+      );
+
+      const demoBtn = screen.getByRole('button', { name: /explore in simulation preview/i });
+      fireEvent.click(demoBtn);
+      expect(handleDemo).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('ProfileMenu Dynamic User Presentation', () => {
     it('renders dynamic user credentials and role from authenticated session', () => {
       const mockUser = {
@@ -116,6 +184,28 @@ describe('Authentication Components & Google OIDC Tests', () => {
       expect(screen.getByText('Sarah Connor')).toBeInTheDocument();
       expect(screen.getByText('sarah.connor@sky.net')).toBeInTheDocument();
       expect(screen.getByText(/OWNER · Team Tier/i)).toBeInTheDocument();
+    });
+
+    it('renders Simulation Sandbox label and Exit Preview button in demo mode', () => {
+      const handleSignOut = vi.fn();
+      render(
+        <ProfileMenu
+          isDark={false}
+          onToggleTheme={vi.fn()}
+          onOpenSettings={vi.fn()}
+          onOpenShortcuts={vi.fn()}
+          onSignOut={handleSignOut}
+          isDemoMode={true}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /user account menu/i }));
+      expect(screen.getByText('Simulation Sandbox')).toBeInTheDocument();
+      expect(screen.getByText('demo@simulation.preview')).toBeInTheDocument();
+      expect(screen.getByText('Exit Preview & Sign In')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /exit preview & sign in/i }));
+      expect(handleSignOut).toHaveBeenCalledTimes(1);
     });
 
     it('calls onSignOut when clicking Sign Out in profile menu', () => {

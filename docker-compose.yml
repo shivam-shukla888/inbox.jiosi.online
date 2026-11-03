@@ -41,7 +41,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-540933255986-asmkro9uiiafqm9lohf73f4uf4insc1u.apps.googleusercontent.com}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-google-client-secret-placeholder}
       JWT_SECRET: ${JWT_SECRET:-jiosi_default_development_hmac_secret_key_minimum_32_bytes_long}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "8080:8080"
     networks:

@@ -102,12 +102,12 @@ export const Header: React.FC<HeaderProps> = ({
         {isDemoMode ? (
           <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono font-medium text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900/60 select-none">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span>Demo Mode</span>
+            <span>Simulation Preview</span>
           </div>
         ) : (
           <div className="hidden md:flex items-center gap-1.5 text-[11px] font-mono text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 select-none">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Synced</span>
+            <span>Workspace Active</span>
           </div>
         )}
 
@@ -135,6 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
           onOpenPrivacy={onOpenPrivacy}
           onOpenTerms={onOpenTerms}
           onOpenSupport={onOpenSupport}
+          isDemoMode={isDemoMode}
           user={user}
         />
       </div>

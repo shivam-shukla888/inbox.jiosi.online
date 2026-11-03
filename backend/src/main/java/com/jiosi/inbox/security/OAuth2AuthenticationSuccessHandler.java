@@ -32,7 +32,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
     public OAuth2AuthenticationSuccessHandler(
             UserProvisioningService userProvisioningService,
-            @Value("${app.frontend-url:http://localhost:3000}") String frontendUrl
+            @Value("${app.frontend-url:http://localhost:5173}") String frontendUrl
     ) {
         this.userProvisioningService = userProvisioningService;
         this.frontendUrl = frontendUrl.endsWith("/") ? frontendUrl.substring(0, frontendUrl.length() - 1) : frontendUrl;

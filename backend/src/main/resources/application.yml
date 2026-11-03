@@ -13,6 +13,8 @@ server:
 spring:
   application:
     name: jiosi-inbox-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:jiosi_inbox}
@@ -74,7 +76,7 @@ logging:
 
 app:
   version: 0.1.0-alpha
-  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
   security:
     enabled: ${SECURITY_ENABLED:true}
     jwt-secret: ${JWT_SECRET:jiosi_default_development_hmac_secret_key_minimum_32_bytes_long}

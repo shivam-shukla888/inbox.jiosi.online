@@ -22,6 +22,7 @@ interface ProfileMenuProps {
   onOpenPrivacy?: () => void;
   onOpenTerms?: () => void;
   onOpenSupport?: () => void;
+  isDemoMode?: boolean;
   user?: {
     fullName: string;
     email: string;
@@ -40,14 +41,19 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({
   onOpenPrivacy,
   onOpenTerms,
   onOpenSupport,
+  isDemoMode = false,
   user,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const displayName = user?.fullName || 'Alex Rivera';
-  const displayEmail = user?.email || 'alex@jiosi.online';
-  const displayRole = user?.role ? `${user.role} · Team Tier` : 'Workspace Member · Team Tier';
+  const displayName = user?.fullName || (isDemoMode ? 'Simulation Sandbox' : 'Authenticated User');
+  const displayEmail = user?.email || (isDemoMode ? 'demo@simulation.preview' : '');
+  const displayRole = user?.role
+    ? `${user.role} · Team Tier`
+    : isDemoMode
+    ? 'Sandbox Preview Mode'
+    : 'Workspace Member · Team Tier';
   const initials = displayName
     .split(' ')
     .filter(Boolean)
@@ -242,7 +248,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({
               className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors text-left"
             >
               <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
+              <span>{isDemoMode ? 'Exit Preview & Sign In' : 'Sign Out'}</span>
             </button>
           </div>
         </div>
