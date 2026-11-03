@@ -100,11 +100,11 @@ describe('Authentication Components & Google OIDC Tests', () => {
 
       expect(screen.getAllByText('JIOSI Inbox').length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText('by Shivsastra').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByText('Your inbox,')).toBeInTheDocument();
-      expect(screen.getByText('intelligently organized.')).toBeInTheDocument();
-      expect(screen.getByText('One Focused Workspace')).toBeInTheDocument();
-      expect(screen.getByText('Clear Email Priorities')).toBeInTheDocument();
-      expect(screen.getByText('Secure Account Access')).toBeInTheDocument();
+      expect(screen.getByText('Your inbox.')).toBeInTheDocument();
+      expect(screen.getByText('A clearer way to work.')).toBeInTheDocument();
+      expect(screen.getByText('Focused Workspace')).toBeInTheDocument();
+      expect(screen.getByText('Clear Priorities')).toBeInTheDocument();
+      expect(screen.getByText('Secure Access')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /explore in simulation preview/i })).toBeInTheDocument();
       expect(screen.getAllByText(/Google OpenID Connect/i).length).toBeGreaterThanOrEqual(1);

@@ -695,22 +695,22 @@ export const App: React.FC = () => {
 
   if (authState === 'INITIALIZING') {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-300">
+      <div className="min-h-screen bg-[#FAF9F6] flex flex-col items-center justify-center text-[#111112] font-sans">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center font-bold text-white shadow-lg shadow-brand-500/30">
+          <div className="w-9 h-9 rounded-lg bg-[#111112] flex items-center justify-center font-mono font-bold text-sm text-white shadow-xs">
             JI
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xl font-semibold tracking-tight text-white">JIOSI Inbox</span>
-              <span className="text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">
+              <span className="text-base font-semibold tracking-tight text-[#111112]">JIOSI Inbox</span>
+              <span className="text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded bg-[#FAF2ED] text-[#B8481D] border border-[#F0D5C7]">
                 by Shivsastra
               </span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <div className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+        <div className="flex items-center gap-2 text-xs text-[#78716C]">
+          <div className="w-4 h-4 border-2 border-[#B8481D] border-t-transparent rounded-full animate-spin" />
           <span>Verifying security session...</span>
         </div>
       </div>

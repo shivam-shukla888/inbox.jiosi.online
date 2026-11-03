@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Sparkles, Inbox, Zap, AlertCircle, ArrowRight, Lock } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Lock, AlertCircle } from 'lucide-react';
 
 interface AuthPageProps {
   onGoogleSignIn: () => void;
@@ -30,115 +30,115 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-brand-500 selection:text-white relative overflow-hidden font-sans">
-      {/* Ambient background lighting */}
-      <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-brand-600/15 via-indigo-600/10 to-transparent blur-3xl pointer-events-none -z-10"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute bottom-0 right-0 w-[600px] h-[400px] bg-indigo-900/10 blur-3xl pointer-events-none -z-10"
-        aria-hidden="true"
-      />
-
-      {/* Top Brand Bar */}
-      <header className="w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
+    <div className="min-h-screen w-full bg-[#FAF9F6] text-[#111112] flex flex-col justify-between selection:bg-[#B8481D]/20 selection:text-[#B8481D] font-sans">
+      {/* Top Navigation & Brand Header */}
+      <header className="w-full max-w-7xl mx-auto px-6 py-6 sm:py-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white font-mono font-bold text-sm tracking-wider shadow-lg shadow-brand-500/20">
+          <div className="w-9 h-9 rounded-lg bg-[#111112] flex items-center justify-center text-white font-mono font-bold text-sm tracking-wider shadow-xs">
             JI
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-base tracking-tight text-white leading-none">
+              <span className="font-semibold text-base tracking-tight text-[#111112] leading-none">
                 JIOSI Inbox
               </span>
-              <span className="text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">
+              <span className="text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded bg-[#FAF2ED] text-[#B8481D] border border-[#F0D5C7]">
                 by Shivsastra
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-0.5 font-medium">
+            <p className="text-[11px] text-[#78716C] mt-0.5 font-normal hidden sm:block">
               Read less. Understand faster. Respond smarter.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-400">
-            <Lock className="w-3 h-3 text-emerald-400" />
-            <span>Encrypted Session</span>
+        <div className="flex items-center gap-3 text-xs text-[#78716C]">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E6E3DC] text-[11px] font-medium text-[#57534E] shadow-2xs">
+            <Lock className="w-3 h-3 text-[#B8481D]" />
+            <span>Encrypted Session · TLS 1.3</span>
           </span>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="w-full max-w-7xl mx-auto px-6 py-8 sm:py-12 flex-1 flex items-center">
+      {/* Main Two-Column Editorial Stage */}
+      <main className="w-full max-w-7xl mx-auto px-6 py-6 sm:py-12 lg:py-16 flex-1 flex items-center">
         <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           
-          {/* Left Column: Product Showcase & Pillars (Desktop) */}
+          {/* Left Column: Brand Story & Editorial Manifesto */}
           <div className="lg:col-span-7 space-y-8 text-left">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-950/80 border border-indigo-800/60 text-indigo-300 text-xs font-medium">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Enterprise Email Intelligence</span>
+              <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest font-semibold text-[#B8481D]">
+                <span>Intelligent Email Workspace</span>
               </div>
               
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-[1.15]">
-                Your inbox,{' '}
-                <span className="bg-gradient-to-r from-brand-400 via-indigo-300 to-indigo-200 bg-clip-text text-transparent">
-                  intelligently organized.
-                </span>
+              <h1 className="font-serif text-4xl sm:text-5xl lg:text-[54px] font-normal text-[#111112] leading-[1.12] tracking-tight">
+                Your inbox.
+                <br />
+                <span className="italic text-[#292524]">A clearer way to work.</span>
               </h1>
               
-              <p className="text-base sm:text-lg text-slate-400 leading-relaxed max-w-2xl">
-                Experience velocity-driven triage, multi-tenant workspace isolation, and automated action item extraction. Built for leaders who value clarity and focused attention.
+              <p className="text-base sm:text-lg text-[#57534E] leading-relaxed max-w-xl font-normal">
+                Bring clarity to every conversation. Prioritize what matters, understand messages faster, and work from one intelligent email workspace.
               </p>
             </div>
 
-            {/* Three Product Pillars */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-2">
-                <div className="w-8 h-8 rounded-lg bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400">
-                  <Inbox className="w-4 h-4" />
+            {/* Three Product Benefits with Hairline Dividers */}
+            <div className="pt-4 space-y-4 max-w-xl">
+              <div className="pt-4 border-t border-[#E6E3DC] flex items-start gap-4">
+                <span className="font-mono text-xs font-semibold text-[#B8481D] tracking-wider pt-0.5 shrink-0">
+                  01
+                </span>
+                <div className="space-y-0.5">
+                  <h2 className="text-sm font-semibold text-[#111112]">
+                    Focused Workspace
+                  </h2>
+                  <p className="text-xs text-[#57534E] leading-relaxed">
+                    Organize conversations in one clean workspace.
+                  </p>
                 </div>
-                <h2 className="text-sm font-semibold text-slate-200">One Focused Workspace</h2>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Keyboard-first triage with 3-panel split view and distraction-free velocity.
-                </p>
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-2">
-                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                  <Zap className="w-4 h-4" />
+              <div className="pt-4 border-t border-[#E6E3DC] flex items-start gap-4">
+                <span className="font-mono text-xs font-semibold text-[#B8481D] tracking-wider pt-0.5 shrink-0">
+                  02
+                </span>
+                <div className="space-y-0.5">
+                  <h2 className="text-sm font-semibold text-[#111112]">
+                    Clear Priorities
+                  </h2>
+                  <p className="text-xs text-[#57534E] leading-relaxed">
+                    Understand important messages without unnecessary noise.
+                  </p>
                 </div>
-                <h2 className="text-sm font-semibold text-slate-200">Clear Email Priorities</h2>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Instant triage scores and urgent action item extraction across threads.
-                </p>
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                  <ShieldCheck className="w-4 h-4" />
+              <div className="pt-4 border-t border-[#E6E3DC] flex items-start gap-4">
+                <span className="font-mono text-xs font-semibold text-[#B8481D] tracking-wider pt-0.5 shrink-0">
+                  03
+                </span>
+                <div className="space-y-0.5">
+                  <h2 className="text-sm font-semibold text-[#111112]">
+                    Secure Access
+                  </h2>
+                  <p className="text-xs text-[#57534E] leading-relaxed">
+                    Access your workspace through secure Google authentication.
+                  </p>
                 </div>
-                <h2 className="text-sm font-semibold text-slate-200">Secure Account Access</h2>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Direct Google OpenID Connect verification without third-party mail brokers.
-                </p>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Authentication Card */}
+          {/* Right Column: Clean White Authentication Panel */}
           <div className="lg:col-span-5 w-full max-w-md mx-auto">
-            <div className="relative rounded-2xl bg-slate-900/90 border border-slate-800/90 shadow-2xl p-7 sm:p-9 backdrop-blur-md space-y-6">
+            <div className="rounded-2xl bg-white border border-[#E6E3DC] shadow-[0_4px_24px_-4px_rgba(17,17,18,0.06),0_1px_3px_rgba(17,17,18,0.04)] p-8 sm:p-10 space-y-6 text-left">
               
               {/* Card Header */}
-              <div className="text-left space-y-1.5">
-                <h2 className="text-xl font-bold tracking-tight text-white">
+              <div className="space-y-1.5">
+                <h2 className="text-2xl font-serif font-normal tracking-tight text-[#111112]">
                   Welcome to JIOSI Inbox
                 </h2>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Sign in securely with your Google account to access your tenant-isolated workspace.
+                <p className="text-xs text-[#57534E] leading-relaxed">
+                  Sign in to your workspace securely.
                 </p>
               </div>
 
@@ -146,16 +146,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               {error && (
                 <div 
                   role="alert"
-                  className="p-3.5 rounded-xl bg-rose-950/80 border border-rose-800/80 text-rose-200 text-xs flex items-start gap-2.5 animate-in fade-in duration-200"
+                  className="p-3.5 rounded-xl bg-[#FDF4EF] border border-[#EAC4B0] text-[#8C3413] text-xs flex items-start gap-2.5 animate-in fade-in duration-200"
                 >
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-4 h-4 text-[#B8481D] shrink-0 mt-0.5" />
                   <div className="flex-1 text-left space-y-1">
-                    <p className="font-semibold text-rose-100">Authentication Failed</p>
-                    <p className="text-rose-300 leading-relaxed">{error}</p>
+                    <p className="font-semibold text-[#8C3413]">Authentication Failed</p>
+                    <p className="text-[#A04018] leading-relaxed">{error}</p>
                     {onClearError && (
                       <button
                         onClick={onClearError}
-                        className="text-[11px] text-rose-400 hover:text-rose-200 underline mt-1 cursor-pointer block"
+                        className="text-[11px] text-[#B8481D] hover:text-[#8C3413] underline font-medium mt-1 cursor-pointer block"
                       >
                         Dismiss and retry
                       </button>
@@ -170,11 +170,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   type="button"
                   onClick={handleSignIn}
                   disabled={isLoading || isRedirecting}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl border border-slate-700 bg-white hover:bg-slate-100 text-slate-900 font-semibold text-sm transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 cursor-pointer min-h-[48px]"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl border border-[#DCD8CF] hover:border-[#BFB9AD] bg-white hover:bg-[#F9F8F5] active:bg-[#F2EFE8] text-[#111112] font-medium text-sm transition-all shadow-2xs hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#B8481D]/30 focus:border-[#B8481D] disabled:opacity-50 cursor-pointer min-h-[48px]"
                   aria-label="Continue with Google"
                 >
                   {isRedirecting || isLoading ? (
-                    <div className="w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-[#111112] border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                       <path
@@ -198,25 +198,25 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   <span>{isRedirecting ? 'Redirecting to Google...' : 'Continue with Google'}</span>
                 </button>
 
-                {/* Security Verification Footnote */}
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Google OpenID Connect · Tenant-Isolated</span>
+                {/* Security Verification Caption */}
+                <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#78716C]">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#B8481D]" />
+                  <span>Secure sign-in powered by Google OpenID Connect.</span>
                 </div>
               </div>
 
-              {/* Simulation Sandbox Divider */}
-              <div className="pt-4 border-t border-slate-800/80 text-center space-y-2">
-                <p className="text-xs text-slate-400">
+              {/* Simulation Preview Sandbox */}
+              <div className="pt-4 border-t border-[#E6E3DC] text-center space-y-2">
+                <p className="text-xs text-[#78716C]">
                   Evaluating without an account?
                 </p>
                 <button
                   type="button"
                   onClick={onExploreDemo}
-                  className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-lg transition-colors border border-slate-700/60 cursor-pointer min-h-[40px]"
+                  className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 text-xs font-medium text-[#57534E] hover:text-[#111112] bg-[#FAF9F6] hover:bg-[#F2EFE8] rounded-xl transition-colors border border-[#E6E3DC] hover:border-[#DCD8CF] cursor-pointer min-h-[40px]"
                 >
                   <span>Explore in Simulation Preview</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5 text-[#B8481D]" />
                 </button>
               </div>
             </div>
@@ -225,15 +225,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="w-full max-w-7xl mx-auto px-6 py-6 border-t border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+      {/* Understated Editorial Footer */}
+      <footer className="w-full max-w-7xl mx-auto px-6 py-6 border-t border-[#E6E3DC] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#78716C]">
         <p>© 2026 JIOSI Inbox by Shivsastra. All rights reserved.</p>
         
         <div className="flex items-center gap-6">
           {onOpenPrivacy && (
             <button
               onClick={onOpenPrivacy}
-              className="hover:text-slate-200 transition-colors cursor-pointer"
+              className="hover:text-[#111112] transition-colors cursor-pointer"
             >
               Privacy Policy
             </button>
@@ -241,7 +241,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           {onOpenTerms && (
             <button
               onClick={onOpenTerms}
-              className="hover:text-slate-200 transition-colors cursor-pointer"
+              className="hover:text-[#111112] transition-colors cursor-pointer"
             >
               Terms of Service
             </button>
@@ -249,7 +249,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           {onOpenSupport && (
             <button
               onClick={onOpenSupport}
-              className="hover:text-slate-200 transition-colors cursor-pointer"
+              className="hover:text-[#111112] transition-colors cursor-pointer"
             >
               Support
             </button>
@@ -259,4 +259,3 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     </div>
   );
 };
-

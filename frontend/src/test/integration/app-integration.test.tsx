@@ -189,7 +189,7 @@ describe('JIOSI Inbox Application Integration Tests', () => {
     render(<App />);
 
     // Renders full-screen AuthPage
-    expect(await screen.findByText('Your inbox,')).toBeInTheDocument();
+    expect(await screen.findByText('Your inbox.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
     expect(screen.queryByText(/Q3 Seed Extension Term Sheet/i)).not.toBeInTheDocument();
 
