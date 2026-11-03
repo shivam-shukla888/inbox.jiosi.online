@@ -40,3 +40,4 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
         response.sendRedirect(frontendUrl + "/?auth_error=" + safeError);
     }
 }
+

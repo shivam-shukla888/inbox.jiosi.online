@@ -59,3 +59,4 @@ public class WorkspaceAuthorizationService {
 
     public record WorkspaceMemberAccess(Workspace workspace, User user, String role) {}
 }
+

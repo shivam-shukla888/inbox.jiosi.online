@@ -135,3 +135,4 @@ public class GoogleIdTokenVerifierService {
         return new GoogleIdentity(sub, email, true, name, null);
     }
 }
+

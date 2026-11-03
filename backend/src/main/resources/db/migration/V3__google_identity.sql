@@ -12,3 +12,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_users_google_subject ON users(google_subjec
 
 -- Fast index for looking up users by auth provider and subject
 CREATE INDEX IF NOT EXISTS idx_users_provider_subject ON users(auth_provider, google_subject);
+
