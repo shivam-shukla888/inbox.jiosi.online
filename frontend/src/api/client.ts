@@ -70,6 +70,10 @@ export class ApiClient {
     this.workspaceId = workspaceId;
     if (typeof window !== 'undefined' && window.sessionStorage) {
       this.authToken = sessionStorage.getItem('jiosi_auth_token');
+      const savedWs = sessionStorage.getItem('jiosi_workspace_id');
+      if (savedWs) {
+        this.workspaceId = savedWs;
+      }
     }
   }
 
@@ -83,6 +87,13 @@ export class ApiClient {
 
   setWorkspaceId(id: string) {
     this.workspaceId = id;
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      if (id) {
+        sessionStorage.setItem('jiosi_workspace_id', id);
+      } else {
+        sessionStorage.removeItem('jiosi_workspace_id');
+      }
+    }
   }
 
   getAuthToken(): string | null {
@@ -108,12 +119,14 @@ export class ApiClient {
     return `${this.baseUrl}/oauth2/authorization/google`;
   }
 
-  private getHeaders(isMutating: boolean = false): HeadersInit {
+  private getHeaders(isMutating: boolean = false, includeWorkspace: boolean = true): HeadersInit {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'X-Workspace-Id': this.workspaceId,
     };
+    if (includeWorkspace && this.workspaceId) {
+      headers['X-Workspace-Id'] = this.workspaceId;
+    }
     if (this.authToken) {
       headers['Authorization'] = this.authToken.startsWith('Bearer ') ? this.authToken : `Bearer ${this.authToken}`;
     }
@@ -184,7 +197,7 @@ export class ApiClient {
   async getMe(): Promise<AuthSessionData> {
     const res = await fetch(`${this.baseUrl}/api/v1/auth/me`, {
       method: 'GET',
-      headers: this.getHeaders(false),
+      headers: this.getHeaders(false, false),
       credentials: 'include',
     });
 
@@ -206,11 +219,12 @@ export class ApiClient {
     try {
       await fetch(`${this.baseUrl}/api/v1/auth/logout`, {
         method: 'POST',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(true, false),
         credentials: 'include',
       });
     } finally {
       this.setAuthToken(null);
+      this.setWorkspaceId(DEFAULT_WORKSPACE_ID);
     }
   }
 

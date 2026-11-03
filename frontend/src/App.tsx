@@ -136,6 +136,9 @@ export const App: React.FC = () => {
           const resObj = res as unknown as { data?: AuthSessionData } & AuthSessionData;
           const user = resObj?.data || resObj;
           if (user && (user.userId || user.email)) {
+            if (user.defaultWorkspaceId) {
+              apiClient.setWorkspaceId(user.defaultWorkspaceId);
+            }
             setCurrentUser(user);
             setAuthState('AUTHENTICATED');
           } else {

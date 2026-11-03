@@ -45,6 +45,13 @@ public class SecurityInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // Global auth endpoints (/api/v1/auth/**) are user-scoped, not workspace-scoped
+        String uri = request.getRequestURI();
+        if (uri != null && uri.startsWith("/api/v1/auth/")) {
+            UserContext.set(user, "AUTHENTICATED");
+            return true;
+        }
+
         String workspaceHeader = request.getHeader("X-Workspace-Id");
         if (workspaceHeader != null && !workspaceHeader.isBlank()) {
             UUID workspaceId;
