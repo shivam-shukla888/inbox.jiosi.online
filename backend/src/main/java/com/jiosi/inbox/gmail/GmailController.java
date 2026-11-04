@@ -47,8 +47,12 @@ public class GmailController {
     ) {
         User user = resolveCurrentUser();
 
-        // Verify workspace authorization if workspaceId is provided
-        if (workspaceId != null && workspaceAuthorizationService != null) {
+        if (workspaceId == null) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Workspace ID is required to generate Gmail connect URL"));
+        }
+
+        // Verify workspace authorization
+        if (workspaceAuthorizationService != null) {
             workspaceAuthorizationService.validateAccess(workspaceId, user);
         }
 
@@ -57,11 +61,7 @@ public class GmailController {
             HttpSession session = request.getSession(true);
             session.setAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_GMAIL_CONNECT_ACTION, Boolean.TRUE);
             session.setAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_USER_ID, user.getId().toString());
-            if (workspaceId != null) {
-                session.setAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_WORKSPACE_ID, workspaceId.toString());
-            } else {
-                session.removeAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_WORKSPACE_ID);
-            }
+            session.setAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_WORKSPACE_ID, workspaceId.toString());
         }
 
         // Return clean URL without user_id or workspace_id in query string

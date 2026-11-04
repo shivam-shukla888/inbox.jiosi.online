@@ -446,34 +446,34 @@ export class ApiClient {
   // GMAIL API INTEGRATION (READ-ONLY)
   // =========================================================================
 
-  async getGmailStatus(): Promise<ApiResponse<GmailStatusData>> {
+  async getGmailStatus(): Promise<GmailStatusData> {
     const res = await fetch(`${this.baseUrl}/api/v1/gmail/status`, {
       method: 'GET',
       headers: this.getHeaders(false, true),
       credentials: 'include',
     });
-    return this.handleResponse<ApiResponse<GmailStatusData>>(res);
+    return this.handleResponse<GmailStatusData>(res);
   }
 
-  async getGmailConnectUrl(): Promise<ApiResponse<{ connectUrl: string }>> {
+  async getGmailConnectUrl(): Promise<{ connectUrl: string }> {
     const res = await fetch(`${this.baseUrl}/api/v1/gmail/connect-url`, {
       method: 'GET',
       headers: this.getHeaders(false, true),
       credentials: 'include',
     });
-    return this.handleResponse<ApiResponse<{ connectUrl: string }>>(res);
+    return this.handleResponse<{ connectUrl: string }>(res);
   }
 
-  async disconnectGmail(): Promise<ApiResponse<{ success: boolean; status: string }>> {
+  async disconnectGmail(): Promise<{ success: boolean; status: string }> {
     const res = await fetch(`${this.baseUrl}/api/v1/gmail/disconnect`, {
       method: 'POST',
       headers: this.getHeaders(true, true),
       credentials: 'include',
     });
-    return this.handleResponse<ApiResponse<{ success: boolean; status: string }>>(res);
+    return this.handleResponse<{ success: boolean; status: string }>(res);
   }
 
-  async getGmailMessages(maxResults: number = 20, pageToken?: string): Promise<ApiResponse<GmailMessagesPageData>> {
+  async getGmailMessages(maxResults: number = 20, pageToken?: string): Promise<GmailMessagesPageData> {
     let url = `${this.baseUrl}/api/v1/gmail/messages?maxResults=${maxResults}`;
     if (pageToken) {
       url += `&pageToken=${encodeURIComponent(pageToken)}`;
@@ -483,16 +483,16 @@ export class ApiClient {
       headers: this.getHeaders(false, true),
       credentials: 'include',
     });
-    return this.handleResponse<ApiResponse<GmailMessagesPageData>>(res);
+    return this.handleResponse<GmailMessagesPageData>(res);
   }
 
-  async getGmailMessageDetail(messageId: string): Promise<ApiResponse<GmailMessageDetail>> {
+  async getGmailMessageDetail(messageId: string): Promise<GmailMessageDetail> {
     const res = await fetch(`${this.baseUrl}/api/v1/gmail/messages/${encodeURIComponent(messageId)}`, {
       method: 'GET',
       headers: this.getHeaders(false, true),
       credentials: 'include',
     });
-    return this.handleResponse<ApiResponse<GmailMessageDetail>>(res);
+    return this.handleResponse<GmailMessageDetail>(res);
   }
 }
 

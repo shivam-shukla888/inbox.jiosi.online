@@ -23,8 +23,8 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
     setStatusError(null);
     try {
       const res = await apiClient.getGmailStatus();
-      if (res && res.data) {
-        setGmailStatus(res.data);
+      if (res && (res.connected !== undefined || res.status)) {
+        setGmailStatus(res);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Could not check Gmail account status';
@@ -39,12 +39,16 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
   }, []);
 
   const handleConnectGmail = async () => {
+    if (isConnecting) return;
     setIsConnecting(true);
     try {
+      if (!apiClient.getWorkspaceId() && user?.defaultWorkspaceId) {
+        apiClient.setWorkspaceId(user.defaultWorkspaceId);
+      }
       onNotify?.('Requesting secure Google OAuth authorization for Gmail...', 'info');
       const res = await apiClient.getGmailConnectUrl();
-      if (res && res.data && res.data.connectUrl) {
-        window.location.href = res.data.connectUrl;
+      if (res?.connectUrl && res.connectUrl.trim().length > 0) {
+        window.location.href = res.connectUrl.trim();
       } else {
         throw new Error('No authorization URL returned by server');
       }
@@ -56,6 +60,7 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
   };
 
   const handleDisconnectGmail = async () => {
+    if (isDisconnecting) return;
     if (!window.confirm('Disconnect your Gmail account from JIOSI Inbox? Tokens stored on the server will be revoked.')) {
       return;
     }
@@ -73,10 +78,11 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
   };
 
   const handleSyncGmail = async () => {
+    if (isSyncing) return;
     setIsSyncing(true);
     try {
       const res = await apiClient.getGmailMessages(15);
-      const count = res?.data?.messages?.length || 0;
+      const count = res?.messages?.length || 0;
       setGmailStatus((prev) => prev ? { ...prev, lastSyncAt: new Date().toISOString() } : null);
       onNotify?.(`Successfully synchronized ${count} messages from Gmail Inbox.`, 'success');
     } catch (err: unknown) {
