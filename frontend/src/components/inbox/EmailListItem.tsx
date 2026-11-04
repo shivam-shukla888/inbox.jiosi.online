@@ -22,9 +22,9 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
   return (
     <div
       onClick={onSelect}
-      className={`group relative flex items-start gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800/80 cursor-pointer transition-all select-none ${
+      className={`group relative flex items-start gap-3 px-4 py-3.5 border-b border-slate-100 dark:border-slate-800/80 cursor-pointer transition-all select-none ${
         isSelected
-          ? 'bg-brand-50/60 dark:bg-slate-800/90 border-l-2 border-l-brand-600 dark:border-l-brand-400 pl-[14px]'
+          ? 'bg-jiosi-selected dark:bg-slate-800/90 border-l-[3px] border-l-jiosi-indigo dark:border-l-indigo-400 pl-[13px]'
           : 'bg-white dark:bg-slate-900 hover:bg-slate-50/80 dark:hover:bg-slate-850/60'
       }`}
     >
@@ -32,11 +32,11 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
       <div className="flex flex-col items-center gap-2 pt-0.5 shrink-0">
         <button
           onClick={onToggleCheck}
-          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5 rounded"
+          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5 rounded cursor-pointer"
           aria-label={isChecked ? 'Deselect thread' : 'Select thread'}
         >
           {isChecked ? (
-            <CheckSquare className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+            <CheckSquare className="w-3.5 h-3.5 text-jiosi-indigo dark:text-indigo-400" />
           ) : (
             <Square className="w-3.5 h-3.5 opacity-30 group-hover:opacity-80 transition-opacity" />
           )}
@@ -64,9 +64,9 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
         <div className="flex items-center justify-between gap-2 mb-0.5">
           <div className="flex items-center gap-1.5 overflow-hidden">
             <span
-              className={`text-xs sm:text-[13px] truncate ${
+              className={`text-xs sm:text-[13px] font-ui truncate ${
                 email.isUnread
-                  ? 'font-semibold text-slate-900 dark:text-slate-100'
+                  ? 'font-bold text-slate-950 dark:text-slate-50'
                   : 'font-medium text-slate-700 dark:text-slate-300'
               }`}
             >
@@ -76,7 +76,7 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
             {/* Restrained Star Icon */}
             <button
               onClick={onToggleStar}
-              className="p-0.5 rounded text-slate-300 hover:text-amber-500 transition-colors shrink-0"
+              className="p-0.5 rounded text-slate-300 hover:text-amber-500 transition-colors shrink-0 cursor-pointer"
               aria-label={email.isStarred ? 'Unstar' : 'Star'}
             >
               <Star
@@ -106,7 +106,7 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
         </p>
 
         {/* Clean one-line preview */}
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-relaxed">
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-relaxed font-light">
           {email.snippet}
         </p>
 
@@ -127,7 +127,7 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
             )}
 
             {email.isDraft && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-brand-600 dark:text-brand-400 px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/50 border border-brand-200 dark:border-brand-800">
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-jiosi-indigo dark:text-indigo-400 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800">
                 <FileEdit className="w-2.5 h-2.5" />
                 Draft · {email.lastEdited}
               </span>

@@ -4,12 +4,11 @@ import {
   Link2,
   Bell,
   Sun,
-  Moon,
   Keyboard,
   Shield,
   CreditCard,
   ArrowLeft,
-  Download
+  CheckCircle2
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -73,7 +72,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-canvas-dark overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-canvas-dark overflow-hidden font-sans">
       {/* Settings Top Header */}
       <div className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
@@ -82,11 +81,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             size="sm"
             onClick={onBackToMail}
             icon={<ArrowLeft className="w-4 h-4" />}
+            className="font-ui"
           >
             Back to Inbox
           </Button>
           <span className="text-slate-300 dark:text-slate-700">/</span>
-          <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <h1 className="text-sm font-ui font-bold text-slate-900 dark:text-slate-100">
             Settings & Workspace
           </h1>
         </div>
@@ -106,13 +106,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left cursor-pointer ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-ui font-medium transition-colors text-left cursor-pointer ${
                     isActive
-                      ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300'
+                      ? 'bg-jiosi-selected text-jiosi-indigo dark:bg-slate-800 dark:text-indigo-300 font-semibold'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
                   }`}
                 >
-                  <span className={isActive ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400'}>
+                  <span className={isActive ? 'text-jiosi-indigo dark:text-indigo-400' : 'text-slate-400'}>
                     {tab.icon}
                   </span>
                   <span>{tab.label}</span>
@@ -127,51 +127,63 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {activeTab === 'general' && (
             <form onSubmit={handleSaveGeneral} className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                <h2 className="text-base font-ui font-bold text-slate-900 dark:text-slate-100">
                   General Preferences
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-light">
                   Configure your workspace identity, author signature, and AI response style.
                 </p>
               </div>
 
-              <div className="space-y-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="space-y-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                    Display Name
+                  <label className="block text-xs font-ui font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Your Name
                   </label>
                   <Input
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Your full name"
+                    placeholder="Full name"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                    Workspace Organization
+                  <label className="block text-xs font-ui font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Workspace Name
                   </label>
                   <Input
                     value={workspaceName}
                     onChange={(e) => setWorkspaceName(e.target.value)}
-                    placeholder="Company or organization"
+                    placeholder="Workspace name"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                    Preferred AI Reply Tone
+                  <label className="block text-xs font-ui font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Email Signature
                   </label>
-                  <div className="grid grid-cols-3 gap-2.5">
+                  <textarea
+                    rows={4}
+                    value={emailSignature}
+                    onChange={(e) => setEmailSignature(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs sm:text-sm rounded-xl p-3 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-jiosi-indigo/20 focus:border-jiosi-indigo font-light"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-ui font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Default AI Tone
+                  </label>
+                  <div className="flex gap-2">
                     {(['professional', 'friendly', 'concise'] as const).map((tone) => (
                       <button
                         key={tone}
                         type="button"
                         onClick={() => setDefaultTone(tone)}
-                        className={`px-3 py-2 text-xs font-medium rounded-lg border capitalize transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-ui capitalize transition-colors cursor-pointer ${
                           defaultTone === tone
-                            ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 dark:border-brand-600'
-                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                            ? 'bg-jiosi-indigo text-white font-medium'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
                         }`}
                       >
                         {tone}
@@ -180,89 +192,90 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                    Email Signature
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={emailSignature}
-                    onChange={(e) => setEmailSignature(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 text-xs rounded-lg border border-slate-200 dark:border-slate-700/80 focus:border-brand-500 focus:outline-none p-2.5 font-mono"
-                  />
+                <div className="pt-2">
+                  <Button type="submit" variant="brand" size="sm" className="font-ui">
+                    Save Changes
+                  </Button>
                 </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button variant="brand" size="md" type="submit">
-                  Save Changes
-                </Button>
               </div>
             </form>
           )}
 
-          {activeTab === 'accounts' && <ConnectedAccountsView onNotify={onNotify} user={user} />}
+          {activeTab === 'accounts' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-ui font-bold text-slate-900 dark:text-slate-100">
+                  Connected Accounts & Integrations
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-light">
+                  Manage external email inboxes synced to your JIOSI Inbox workspace.
+                </p>
+              </div>
+
+              <ConnectedAccountsView onNotify={onNotify} user={user} />
+            </div>
+          )}
 
           {activeTab === 'notifications' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                  Notification & Urgency Alerts
+                <h2 className="text-base font-ui font-bold text-slate-900 dark:text-slate-100">
+                  Notification Controls
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Manage how JIOSI notifies you of incoming high-priority and actionable emails.
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-light">
+                  Choose when and how JIOSI notifies you of incoming threads and urgent replies.
                 </p>
               </div>
 
-              <div className="space-y-3 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-xs font-medium text-slate-900 dark:text-slate-100">
-                      Red Action Indicator for "Needs Reply"
+                    <p className="text-xs font-ui font-semibold text-slate-900 dark:text-slate-100">
+                      Needs Reply urgent alerts
                     </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Show an urgent red dot badge when incoming mail requires your explicit reply.
+                    <p className="text-[11px] text-slate-500 font-light">
+                      Visual highlight and instant notification for emails detected as actionable.
                     </p>
                   </div>
                   <input
                     type="checkbox"
                     checked={urgentAlerts}
                     onChange={(e) => setUrgentAlerts(e.target.checked)}
-                    className="w-4 h-4 accent-brand-500 rounded cursor-pointer"
+                    className="w-4 h-4 text-jiosi-indigo rounded focus:ring-jiosi-indigo cursor-pointer"
                   />
                 </div>
 
-                <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-xs font-medium text-slate-900 dark:text-slate-100">
+                    <p className="text-xs font-ui font-semibold text-slate-900 dark:text-slate-100">
                       Desktop Push Notifications
                     </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Receive instant browser notifications for VIP and important senders.
+                    <p className="text-[11px] text-slate-500 font-light">
+                      Show OS banners when important messages arrive.
                     </p>
                   </div>
                   <input
                     type="checkbox"
                     checked={desktopPush}
                     onChange={(e) => setDesktopPush(e.target.checked)}
-                    className="w-4 h-4 accent-brand-500 rounded cursor-pointer"
+                    className="w-4 h-4 text-jiosi-indigo rounded focus:ring-jiosi-indigo cursor-pointer"
                   />
                 </div>
 
-                <div className="flex items-center justify-between py-2">
+                <div className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-xs font-medium text-slate-900 dark:text-slate-100">
-                      Sound Effects
+                    <p className="text-xs font-ui font-semibold text-slate-900 dark:text-slate-100">
+                      Audio Chimes
                     </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Play a subtle chime upon successfully archiving or sending an email.
+                    <p className="text-[11px] text-slate-500 font-light">
+                      Subtle sound effect on successful mail send and archive.
                     </p>
                   </div>
                   <input
                     type="checkbox"
                     checked={soundEffects}
                     onChange={(e) => setSoundEffects(e.target.checked)}
-                    className="w-4 h-4 accent-brand-500 rounded cursor-pointer"
+                    className="w-4 h-4 text-jiosi-indigo rounded focus:ring-jiosi-indigo cursor-pointer"
                   />
                 </div>
               </div>
@@ -272,78 +285,34 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {activeTab === 'appearance' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                  Appearance & Theme
+                <h2 className="text-base font-ui font-bold text-slate-900 dark:text-slate-100">
+                  Interface Appearance
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Customize the look and feel of your JIOSI Inbox workspace. Both light and dark modes are tailored for high focus.
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-light">
+                  Tailor the theme and visual density to your preferences.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Light Theme Card */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isDark) onToggleTheme();
-                  }}
-                  className={`p-4 rounded-xl border text-left cursor-pointer transition-all ${
-                    !isDark
-                      ? 'border-brand-500 ring-2 ring-brand-500/20 bg-white shadow-card'
-                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-slate-100">
-                      <Sun className="w-4 h-4 text-amber-500" /> Light Theme
-                    </span>
-                    {!isDark && (
-                      <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px]">
-                        ✓
-                      </span>
-                    )}
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-ui font-semibold text-slate-900 dark:text-slate-100">
+                      Theme Selection
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-light">
+                      Currently using {isDark ? 'Dark Theme' : 'Light Theme'}.
+                    </p>
                   </div>
-                  <div className="h-20 rounded-lg bg-slate-100 border border-slate-200 p-2 space-y-1.5">
-                    <div className="w-2/3 h-2 rounded bg-slate-300" />
-                    <div className="w-full h-2 rounded bg-slate-200" />
-                    <div className="w-4/5 h-2 rounded bg-slate-200" />
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-2.5">
-                    Crisp white primary surfaces with subtle slate dividers and deep charcoal typography.
-                  </p>
-                </button>
-
-                {/* Dark Theme Card */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isDark) onToggleTheme();
-                  }}
-                  className={`p-4 rounded-xl border text-left cursor-pointer transition-all ${
-                    isDark
-                      ? 'border-brand-500 ring-2 ring-brand-500/20 bg-slate-900 shadow-card'
-                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-slate-100">
-                      <Moon className="w-4 h-4 text-indigo-400" /> Dark Theme
-                    </span>
-                    {isDark && (
-                      <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px]">
-                        ✓
-                      </span>
-                    )}
-                  </div>
-                  <div className="h-20 rounded-lg bg-slate-950 border border-slate-800 p-2 space-y-1.5">
-                    <div className="w-2/3 h-2 rounded bg-slate-700" />
-                    <div className="w-full h-2 rounded bg-slate-800" />
-                    <div className="w-4/5 h-2 rounded bg-slate-800" />
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-2.5">
-                    Deep charcoal background (#0B0F17) with lighter panel surfaces and indigo accents.
-                  </p>
-                </button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={onToggleTheme}
+                    icon={isDark ? <Sun className="w-3.5 h-3.5 text-amber-500" /> : <Sun className="w-3.5 h-3.5 text-slate-600" />}
+                    className="font-ui"
+                  >
+                    Switch to {isDark ? 'Light Theme' : 'Dark Theme'}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -351,61 +320,49 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {activeTab === 'shortcuts' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                <h2 className="text-base font-ui font-bold text-slate-900 dark:text-slate-100">
                   Keyboard Shortcuts
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Speed through your inbox with keyboard-first navigation inspired by Superhuman & Linear.
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-light">
+                  Master high-velocity navigation with Superhuman and Vim shortcut parity.
                 </p>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
-                    <tr>
-                      <th className="px-4 py-2.5 font-medium">Action</th>
-                      <th className="px-4 py-2.5 font-medium text-right">Shortcut</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-200">
-                    <tr>
-                      <td className="px-4 py-2.5">Next Email / Move Down</td>
-                      <td className="px-4 py-2.5 text-right"><Kbd>J</Kbd> or <Kbd>↓</Kbd></td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2.5">Previous Email / Move Up</td>
-                      <td className="px-4 py-2.5 text-right"><Kbd>K</Kbd> or <Kbd>↑</Kbd></td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2.5">Compose New Message</td>
-                      <td className="px-4 py-2.5 text-right"><Kbd>C</Kbd></td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2.5">Global Search & Command Palette</td>
-                      <td className="px-4 py-2.5 text-right"><Kbd>⌘K</Kbd> or <Kbd>Ctrl+K</Kbd></td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2.5">Archive Selected Email</td>
-                      <td className="px-4 py-2.5 text-right"><Kbd>E</Kbd></td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2.5">Reply to Thread</td>
-                      <td className="px-4 py-2.5 text-right"><Kbd>R</Kbd></td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2.5">Send Draft Immediately</td>
-                      <td className="px-4 py-2.5 text-right"><Kbd>⌘↵</Kbd> or <Kbd>Ctrl+Enter</Kbd></td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2.5">Snooze Thread</td>
-                      <td className="px-4 py-2.5 text-right"><Kbd>H</Kbd></td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2.5">Close / Dismiss Active Modal</td>
-                      <td className="px-4 py-2.5 text-right"><Kbd>ESC</Kbd></td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-slate-700 dark:text-slate-300">Navigate down</span>
+                    <Kbd>J</Kbd>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-slate-700 dark:text-slate-300">Navigate up</span>
+                    <Kbd>K</Kbd>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-slate-700 dark:text-slate-300">Archive message</span>
+                    <Kbd>E</Kbd>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-slate-700 dark:text-slate-300">Reply to message</span>
+                    <Kbd>R</Kbd>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-slate-700 dark:text-slate-300">Compose new message</span>
+                    <Kbd>C</Kbd>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-slate-700 dark:text-slate-300">Snooze message</span>
+                    <Kbd>H</Kbd>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-slate-700 dark:text-slate-300">Command Palette</span>
+                    <Kbd>⌘K</Kbd>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-slate-700 dark:text-slate-300">Send message</span>
+                    <Kbd>⌘↵</Kbd>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -413,56 +370,77 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {activeTab === 'privacy' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                  Privacy & Data Security
+                <h2 className="text-base font-ui font-bold text-slate-900 dark:text-slate-100">
+                  Privacy & Cryptographic Security
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  JIOSI is built with strict zero-retention principles. Your private communications remain confidential.
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-light">
+                  Strict multi-tenant guarantees and zero surveillance commitments.
                 </p>
               </div>
 
-              <div className="space-y-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                  <div>
-                    <p className="text-xs font-medium text-slate-900 dark:text-slate-100">
-                      Zero-Retention AI Processing
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Summaries and drafts are computed in transient memory; raw emails are never retained by third-party model providers.
-                    </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={zeroRetention}
-                    onChange={(e) => setZeroRetention(e.target.checked)}
-                    className="w-4 h-4 accent-brand-500 rounded cursor-pointer"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                  <div>
-                    <p className="text-xs font-medium text-slate-900 dark:text-slate-100">
-                      AI Model Training Opt-Out
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Explicitly prohibit the use of your email metadata and tone patterns for model retraining.
-                    </p>
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-ui font-semibold text-slate-900 dark:text-slate-100">
+                        Zero AI Model Training
+                      </p>
+                      <p className="text-[11px] text-slate-500 font-light mt-0.5 leading-relaxed">
+                        Your emails, summaries, and drafts are never used to train public or foundational AI models.
+                      </p>
+                    </div>
                   </div>
                   <input
                     type="checkbox"
                     checked={optOutTraining}
                     onChange={(e) => setOptOutTraining(e.target.checked)}
-                    className="w-4 h-4 accent-brand-500 rounded cursor-pointer"
+                    className="w-4 h-4 text-jiosi-indigo rounded focus:ring-jiosi-indigo cursor-pointer ml-3"
                   />
                 </div>
 
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg text-xs text-slate-600 dark:text-slate-300">
-                  <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">
-                    Compliance & Encryption
-                  </p>
-                  <p className="text-[11px] leading-relaxed">
-                    SOC 2 Type II compliant controls, TLS 1.3 transport encryption, and client-isolated Postgres row-level security.
-                  </p>
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-ui font-semibold text-slate-900 dark:text-slate-100">
+                        Zero-Retention Query Mode
+                      </p>
+                      <p className="text-[11px] text-slate-500 font-light mt-0.5 leading-relaxed">
+                        Discard ephemeral query vectors immediately following completion.
+                      </p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={zeroRetention}
+                    onChange={(e) => setZeroRetention(e.target.checked)}
+                    className="w-4 h-4 text-jiosi-indigo rounded focus:ring-jiosi-indigo cursor-pointer ml-3"
+                  />
+                </div>
+
+                <div className="flex items-start gap-3 pt-1">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-ui font-semibold text-slate-900 dark:text-slate-100">
+                      Tenant-Isolated PostgreSQL
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-light mt-0.5 leading-relaxed">
+                      Every database query executes with cryptographic workspace isolation enforced by server interceptors.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-ui font-semibold text-slate-900 dark:text-slate-100">
+                      AES-256-GCM Encrypted OAuth Tokens
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-light mt-0.5 leading-relaxed">
+                      Google OAuth refresh tokens are encrypted at rest and never exposed to the client browser.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -471,54 +449,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {activeTab === 'billing' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                  Subscription & Billing
+                <h2 className="text-base font-ui font-bold text-slate-900 dark:text-slate-100">
+                  Billing & Workspace Plan
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Manage your plan, payment methods, and download official invoices.
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-light">
+                  Free and open SaaS tier for individual developers and teams.
                 </p>
               </div>
 
-              <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-4">
-                <div className="flex items-center justify-between">
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
                   <div>
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Current Plan
+                    <span className="text-xs font-ui font-semibold text-slate-900 dark:text-slate-100">
+                      Current Plan: Community Edition
                     </span>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-                      Team Enterprise Scale
-                    </h3>
+                    <p className="text-[11px] text-slate-500 font-light mt-0.5">
+                      Includes unified thread triaging, Google OIDC authentication, and AI summarization.
+                    </p>
                   </div>
-                  <Badge variant="success">Active</Badge>
+                  <Badge variant="brand">Free Tier</Badge>
                 </div>
-
-                <div className="flex items-baseline gap-2 pt-1">
-                  <span className="text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">
-                    $1,420
-                  </span>
-                  <span className="text-xs text-slate-500">/ billed annually</span>
-                </div>
-
-                <p className="text-xs text-slate-600 dark:text-slate-400">
-                  Next renewal date: <span className="font-semibold">December 1, 2026</span> via Mastercard ending in <span className="font-mono">4242</span>.
-                </p>
-
-                <div className="pt-2 flex items-center gap-3">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => onNotify?.('Opening Stripe Customer Portal...', 'info')}
-                  >
-                    Manage Payment Method
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onNotify?.('Downloading latest tax invoice (PDF)...', 'success')}
-                    icon={<Download className="w-3.5 h-3.5" />}
-                  >
-                    Download Invoice
-                  </Button>
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Workspace ID: <code className="font-mono text-[10px] text-slate-700 dark:text-slate-300">{user?.defaultWorkspaceId || 'Local Sandbox'}</code></span>
+                  <span>Hosted by Shivsastra</span>
                 </div>
               </div>
             </div>

@@ -59,7 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: Send,
       isUrgentAction: true,
       badgeCount: folderCounts['needs-reply']?.total ?? 0,
-      colorClass: 'text-red-500',
+      colorClass: 'text-action-urgent',
     },
     {
       id: 'starred',
@@ -107,14 +107,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-4 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white font-mono font-bold text-xs tracking-wider shadow-sm shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-jiosi-indigo to-jiosi-violet flex items-center justify-center text-white font-ui font-bold text-xs tracking-wider shadow-sm shrink-0">
                 JI
               </div>
               <div className="flex flex-col">
-                <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100 leading-snug">
+                <h1 className="text-sm font-ui font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-snug">
                   JIOSI Inbox
                 </h1>
-                <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400 leading-none mt-0.5">
+                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-none mt-0.5">
                   by Shivsastra
                 </span>
               </div>
@@ -123,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {onCloseMobile && (
               <button
                 onClick={onCloseMobile}
-                className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-md"
+                className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-md cursor-pointer"
                 aria-label="Close navigation"
               >
                 <X className="w-4 h-4" />
@@ -132,74 +132,67 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Workspace Pill */}
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-left">
+          <div className="flex items-center justify-between px-3 py-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-left">
             <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-5 h-5 rounded-full bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300 flex items-center justify-center font-mono text-[10px] font-semibold shrink-0">
+              <div className="w-5 h-5 rounded-full bg-violet-100 dark:bg-violet-950/60 text-jiosi-violet flex items-center justify-center font-mono text-[10px] font-semibold shrink-0">
                 {(isDemoMode ? 'S' : user?.fullName?.[0] || user?.email?.[0] || 'U').toUpperCase()}
               </div>
               <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
-                {isDemoMode ? 'demo@simulation.preview' : user?.email || 'Authenticated User'}
+                {isDemoMode ? 'Simulation Sandbox' : user?.defaultWorkspaceName || 'Default Workspace'}
               </span>
             </div>
-            <span
-              className={`w-2 h-2 rounded-full ${isDemoMode ? 'bg-amber-400' : 'bg-emerald-500'} shrink-0`}
-              title={isDemoMode ? 'Simulation Sandbox' : 'Connected'}
-            />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="Active Workspace" />
           </div>
 
-          {/* High-Contrast Compose Action with Purple Brand Style */}
+          {/* Compose Primary Action Button */}
           <Button
             variant="brand"
             size="md"
             onClick={onOpenCompose}
-            icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
+            icon={<Plus className="w-4 h-4" />}
             shortcut="C"
-            className="w-full justify-between shadow-xs font-medium"
+            className="w-full shadow-xs hover:shadow transition-all font-ui"
           >
             New Message
           </Button>
 
-          {/* Primary Navigation List */}
-          <nav className="space-y-1 pt-1" aria-label="Mailbox folders">
+          {/* Navigation Items */}
+          <nav className="space-y-1 pt-1" aria-label="Mail folders">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentFolder === item.id;
-              const isUrgent = item.isUrgentAction && (item.badgeCount ?? 0) > 0;
-
               return (
                 <button
                   key={item.id}
                   onClick={() => {
                     onSelectFolder(item.id);
-                    if (onCloseMobile) onCloseMobile();
+                    onCloseMobile?.();
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-ui font-medium transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 font-semibold shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'
+                      ? 'bg-jiosi-selected dark:bg-slate-800 text-jiosi-indigo dark:text-indigo-300 font-semibold shadow-2xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-850 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
+                  aria-current={isActive ? 'page' : undefined}
                 >
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-3">
                     <Icon
-                      className={`w-4 h-4 stroke-[1.75] ${
+                      className={`w-4 h-4 shrink-0 ${
                         isActive
-                          ? 'text-brand-600 dark:text-brand-400'
-                          : isUrgent
-                          ? 'text-red-500'
+                          ? 'text-jiosi-indigo dark:text-indigo-400'
                           : item.colorClass || 'text-slate-400 dark:text-slate-500'
                       }`}
                     />
                     <span>{item.label}</span>
                   </div>
 
-                  {/* Red Action Indicator for Needs Reply vs Neutral for unread */}
                   {item.badgeCount !== undefined && item.badgeCount > 0 && (
                     <span
-                      className={`font-mono text-[10px] px-1.5 py-0.2 rounded-full font-semibold transition-all ${
-                        isUrgent
-                          ? 'bg-red-500 text-white shadow-xs'
+                      className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] tabular-nums ${
+                        item.isUrgentAction
+                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 font-semibold'
                           : isActive
-                          ? 'bg-brand-200 dark:bg-brand-900 text-brand-800 dark:text-brand-200'
+                          ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-semibold'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                       }`}
                     >
@@ -212,32 +205,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
 
-        {/* Bottom Sidebar: Settings, Connected Accounts & System Health */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-3 bg-slate-50/50 dark:bg-slate-900/30">
-          <div className="space-y-1">
-            <button
-              onClick={() => onOpenSettings('accounts')}
-              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <Link2 className="w-3.5 h-3.5 text-slate-400" />
-                <span>Connected Accounts</span>
-              </div>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            </button>
+        {/* Bottom Section: Connected Accounts, Health & Settings */}
+        <div className="p-3 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
+          {/* Quick link to connected accounts */}
+          <button
+            onClick={() => {
+              onOpenSettings('accounts');
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-between px-3 py-2 text-xs font-ui text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5">
+              <Link2 className="w-3.5 h-3.5 text-slate-400" />
+              <span>Connected Accounts</span>
+            </div>
+            <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-medium">
+              Active
+            </span>
+          </button>
 
-            <button
-              onClick={() => onOpenSettings('general')}
-              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <Settings className="w-3.5 h-3.5 text-slate-400" />
-                <span>Settings</span>
-              </div>
-            </button>
-          </div>
+          {/* Quick link to Settings */}
+          <button
+            aria-label="Settings"
+            onClick={() => {
+              onOpenSettings('general');
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-between px-3 py-2 text-xs font-ui text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5">
+              <Settings className="w-3.5 h-3.5 text-slate-400" />
+              <span>Settings</span>
+            </div>
+            <span className="font-mono text-[10px] text-slate-400" aria-hidden="true">G ,</span>
+          </button>
 
-          <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+          {/* Backend / DB Health Pill */}
+          <div className="pt-2">
             <HealthBadge />
           </div>
         </div>

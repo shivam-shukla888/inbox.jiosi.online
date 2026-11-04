@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, ArrowRight, Lock, AlertCircle } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Lock, AlertCircle, Sparkles } from 'lucide-react';
 
 interface AuthPageProps {
   onGoogleSignIn: () => void;
@@ -30,31 +30,31 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#FAF9F6] text-[#111112] flex flex-col justify-between selection:bg-[#B8481D]/20 selection:text-[#B8481D] font-sans">
+    <div className="min-h-screen w-full bg-[#FAF9F6] text-[#111112] flex flex-col justify-between selection:bg-jiosi-violet/20 selection:text-jiosi-violet font-sans antialiased">
       {/* Top Navigation & Brand Header */}
       <header className="w-full max-w-7xl mx-auto px-6 py-6 sm:py-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#111112] flex items-center justify-center text-white font-mono font-bold text-sm tracking-wider shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center text-white font-ui font-bold text-sm tracking-wider shadow-sm">
             JI
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-base tracking-tight text-[#111112] leading-none">
+              <span className="font-ui font-bold text-base tracking-tight text-[#111112] leading-none">
                 JIOSI Inbox
               </span>
-              <span className="text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded bg-[#FAF2ED] text-[#B8481D] border border-[#F0D5C7]">
+              <span className="text-[10px] font-mono font-medium tracking-wide uppercase px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200">
                 by Shivsastra
               </span>
             </div>
-            <p className="text-[11px] text-[#78716C] mt-0.5 font-normal hidden sm:block">
+            <p className="text-[11px] text-slate-500 mt-1 font-normal hidden sm:block">
               Read less. Understand faster. Respond smarter.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-[#78716C]">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E6E3DC] text-[11px] font-medium text-[#57534E] shadow-2xs">
-            <Lock className="w-3 h-3 text-[#B8481D]" />
+        <div className="flex items-center gap-3 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200 text-[11px] font-medium text-slate-700 shadow-2xs">
+            <Lock className="w-3 h-3 text-jiosi-violet" />
             <span>Encrypted Session · TLS 1.3</span>
           </span>
         </div>
@@ -67,60 +67,61 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           {/* Left Column: Brand Story & Editorial Manifesto */}
           <div className="lg:col-span-7 space-y-8 text-left">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest font-semibold text-[#B8481D]">
+              <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest font-semibold text-jiosi-violet">
+                <Sparkles className="w-3 h-3 text-jiosi-violet" />
                 <span>Intelligent Email Workspace</span>
               </div>
               
-              <h1 className="font-serif text-4xl sm:text-5xl lg:text-[54px] font-normal text-[#111112] leading-[1.12] tracking-tight">
+              <h1 className="font-display text-4xl sm:text-5xl lg:text-[54px] font-normal text-[#111112] leading-[1.12] tracking-tight">
                 Your inbox.
                 <br />
-                <span className="italic text-[#292524]">A clearer way to work.</span>
+                <span className="italic font-serif text-[#292524]">A clearer way to work.</span>
               </h1>
               
-              <p className="text-base sm:text-lg text-[#57534E] leading-relaxed max-w-xl font-normal">
+              <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl font-light">
                 Bring clarity to every conversation. Prioritize what matters, understand messages faster, and work from one intelligent email workspace.
               </p>
             </div>
 
             {/* Three Product Benefits with Hairline Dividers */}
             <div className="pt-4 space-y-4 max-w-xl">
-              <div className="pt-4 border-t border-[#E6E3DC] flex items-start gap-4">
-                <span className="font-mono text-xs font-semibold text-[#B8481D] tracking-wider pt-0.5 shrink-0">
+              <div className="pt-4 border-t border-slate-200 flex items-start gap-4">
+                <span className="font-mono text-xs font-semibold text-jiosi-violet tracking-wider pt-0.5 shrink-0">
                   01
                 </span>
                 <div className="space-y-0.5">
-                  <h2 className="text-sm font-semibold text-[#111112]">
+                  <h2 className="text-sm font-ui font-semibold text-[#111112]">
                     Focused Workspace
                   </h2>
-                  <p className="text-xs text-[#57534E] leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed font-light">
                     Organize conversations in one clean workspace.
                   </p>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-[#E6E3DC] flex items-start gap-4">
-                <span className="font-mono text-xs font-semibold text-[#B8481D] tracking-wider pt-0.5 shrink-0">
+              <div className="pt-4 border-t border-slate-200 flex items-start gap-4">
+                <span className="font-mono text-xs font-semibold text-jiosi-violet tracking-wider pt-0.5 shrink-0">
                   02
                 </span>
                 <div className="space-y-0.5">
-                  <h2 className="text-sm font-semibold text-[#111112]">
+                  <h2 className="text-sm font-ui font-semibold text-[#111112]">
                     Clear Priorities
                   </h2>
-                  <p className="text-xs text-[#57534E] leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed font-light">
                     Understand important messages without unnecessary noise.
                   </p>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-[#E6E3DC] flex items-start gap-4">
-                <span className="font-mono text-xs font-semibold text-[#B8481D] tracking-wider pt-0.5 shrink-0">
+              <div className="pt-4 border-t border-slate-200 flex items-start gap-4">
+                <span className="font-mono text-xs font-semibold text-jiosi-violet tracking-wider pt-0.5 shrink-0">
                   03
                 </span>
                 <div className="space-y-0.5">
-                  <h2 className="text-sm font-semibold text-[#111112]">
+                  <h2 className="text-sm font-ui font-semibold text-[#111112]">
                     Secure Access
                   </h2>
-                  <p className="text-xs text-[#57534E] leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed font-light">
                     Access your workspace through secure Google authentication.
                   </p>
                 </div>
@@ -130,14 +131,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
           {/* Right Column: Clean White Authentication Panel */}
           <div className="lg:col-span-5 w-full max-w-md mx-auto">
-            <div className="rounded-2xl bg-white border border-[#E6E3DC] shadow-[0_4px_24px_-4px_rgba(17,17,18,0.06),0_1px_3px_rgba(17,17,18,0.04)] p-8 sm:p-10 space-y-6 text-left">
+            <div className="rounded-2xl bg-white border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-8 sm:p-10 space-y-6 text-left">
               
               {/* Card Header */}
               <div className="space-y-1.5">
-                <h2 className="text-2xl font-serif font-normal tracking-tight text-[#111112]">
+                <h2 className="text-2xl font-display font-medium tracking-tight text-[#111112]">
                   Welcome to JIOSI Inbox
                 </h2>
-                <p className="text-xs text-[#57534E] leading-relaxed">
+                <p className="text-xs text-slate-600 leading-relaxed font-light">
                   Sign in to your workspace securely.
                 </p>
               </div>
@@ -146,16 +147,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               {error && (
                 <div 
                   role="alert"
-                  className="p-3.5 rounded-xl bg-[#FDF4EF] border border-[#EAC4B0] text-[#8C3413] text-xs flex items-start gap-2.5 animate-in fade-in duration-200"
+                  className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5 animate-in fade-in duration-200"
                 >
-                  <AlertCircle className="w-4 h-4 text-[#B8481D] shrink-0 mt-0.5" />
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                   <div className="flex-1 text-left space-y-1">
-                    <p className="font-semibold text-[#8C3413]">Authentication Failed</p>
-                    <p className="text-[#A04018] leading-relaxed">{error}</p>
+                    <p className="font-semibold text-rose-900">Authentication Failed</p>
+                    <p className="text-rose-700 leading-relaxed">{error}</p>
                     {onClearError && (
                       <button
                         onClick={onClearError}
-                        className="text-[11px] text-[#B8481D] hover:text-[#8C3413] underline font-medium mt-1 cursor-pointer block"
+                        className="text-[11px] text-rose-600 hover:text-rose-800 underline font-medium mt-1 cursor-pointer block"
                       >
                         Dismiss and retry
                       </button>
@@ -170,7 +171,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   type="button"
                   onClick={handleSignIn}
                   disabled={isLoading || isRedirecting}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl border border-[#DCD8CF] hover:border-[#BFB9AD] bg-white hover:bg-[#F9F8F5] active:bg-[#F2EFE8] text-[#111112] font-medium text-sm transition-all shadow-2xs hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#B8481D]/30 focus:border-[#B8481D] disabled:opacity-50 cursor-pointer min-h-[48px]"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 active:bg-slate-100 text-[#111112] font-ui font-medium text-sm transition-all shadow-xs hover:shadow focus:outline-none focus:ring-2 focus:ring-jiosi-violet/30 focus:border-jiosi-violet disabled:opacity-50 cursor-pointer min-h-[48px]"
                   aria-label="Continue with Google"
                 >
                   {isRedirecting || isLoading ? (
@@ -199,24 +200,24 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 </button>
 
                 {/* Security Verification Caption */}
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#78716C]">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#B8481D]" />
+                <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 font-sans">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Secure sign-in powered by Google OpenID Connect.</span>
                 </div>
               </div>
 
               {/* Simulation Preview Sandbox */}
-              <div className="pt-4 border-t border-[#E6E3DC] text-center space-y-2">
-                <p className="text-xs text-[#78716C]">
+              <div className="pt-4 border-t border-slate-200 text-center space-y-2">
+                <p className="text-xs text-slate-500">
                   Evaluating without an account?
                 </p>
                 <button
                   type="button"
                   onClick={onExploreDemo}
-                  className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 text-xs font-medium text-[#57534E] hover:text-[#111112] bg-[#FAF9F6] hover:bg-[#F2EFE8] rounded-xl transition-colors border border-[#E6E3DC] hover:border-[#DCD8CF] cursor-pointer min-h-[40px]"
+                  className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 text-xs font-ui font-medium text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200 hover:border-slate-300 cursor-pointer min-h-[40px]"
                 >
                   <span>Explore in Simulation Preview</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-[#B8481D]" />
+                  <ArrowRight className="w-3.5 h-3.5 text-jiosi-violet" />
                 </button>
               </div>
             </div>
@@ -226,14 +227,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({
       </main>
 
       {/* Understated Editorial Footer */}
-      <footer className="w-full max-w-7xl mx-auto px-6 py-6 border-t border-[#E6E3DC] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#78716C]">
+      <footer className="w-full max-w-7xl mx-auto px-6 py-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
         <p>© 2026 JIOSI Inbox by Shivsastra. All rights reserved.</p>
         
         <div className="flex items-center gap-6">
           {onOpenPrivacy && (
             <button
               onClick={onOpenPrivacy}
-              className="hover:text-[#111112] transition-colors cursor-pointer"
+              className="hover:text-slate-900 transition-colors cursor-pointer"
             >
               Privacy Policy
             </button>
@@ -241,7 +242,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           {onOpenTerms && (
             <button
               onClick={onOpenTerms}
-              className="hover:text-[#111112] transition-colors cursor-pointer"
+              className="hover:text-slate-900 transition-colors cursor-pointer"
             >
               Terms of Service
             </button>
@@ -249,7 +250,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           {onOpenSupport && (
             <button
               onClick={onOpenSupport}
-              className="hover:text-[#111112] transition-colors cursor-pointer"
+              className="hover:text-slate-900 transition-colors cursor-pointer"
             >
               Support
             </button>

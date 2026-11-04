@@ -99,31 +99,31 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+        <h2 className="text-base font-ui font-semibold text-slate-900 dark:text-slate-100">
           Connected Email Accounts
         </h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-light">
           Connect your Google Workspace or Gmail account with strictly read-only access to power JIOSI's intelligent triage and inbox view.
         </p>
       </div>
 
       {/* Security notice */}
-      <div className="flex items-start gap-3 p-3.5 rounded-xl bg-brand-50/60 dark:bg-brand-950/30 border border-brand-200/80 dark:border-brand-900/60">
-        <ShieldCheck className="w-5 h-5 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5" />
-        <div className="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-          <span className="font-semibold text-brand-900 dark:text-brand-200">
+      <div className="flex items-start gap-3 p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-900/60">
+        <ShieldCheck className="w-5 h-5 text-jiosi-indigo dark:text-indigo-400 shrink-0 mt-0.5" />
+        <div className="text-xs leading-relaxed text-slate-700 dark:text-slate-300 font-light">
+          <span className="font-ui font-semibold text-indigo-950 dark:text-indigo-200">
             Zero-Token Exposure Architecture:
           </span>{' '}
-          Strictly read-only. JIOSI Inbox requests only <code className="px-1 py-0.5 rounded bg-brand-100/60 dark:bg-brand-900/60 text-[11px] font-mono">gmail.readonly</code>. Tokens are encrypted server-side with AES-256-GCM. Sending, deleting, archiving, or altering mailboxes is strictly disabled.
+          Strictly read-only. JIOSI Inbox requests only <code className="px-1.5 py-0.5 rounded bg-indigo-100/70 dark:bg-indigo-900/60 text-[11px] font-mono text-indigo-800 dark:text-indigo-200">gmail.readonly</code>. Tokens are encrypted server-side with AES-256-GCM. Sending, deleting, archiving, or altering mailboxes is strictly disabled.
         </div>
       </div>
 
       {/* Error alert if status check failed */}
       {statusError && (
-        <div className="flex items-center gap-2.5 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-200">
+        <div className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-200">
           <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <span>{statusError}</span>
-          <Button variant="ghost" size="sm" onClick={fetchStatus} className="ml-auto text-xs">
+          <Button variant="ghost" size="sm" onClick={fetchStatus} className="ml-auto text-xs font-ui">
             Retry
           </Button>
         </div>
@@ -131,7 +131,7 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
 
       {/* Gmail Account Card */}
       <div className="space-y-3">
-        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
+        <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/60">
               <Mail className="w-5 h-5" />
@@ -139,7 +139,7 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
 
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <span className="text-sm font-ui font-semibold text-slate-900 dark:text-slate-100">
                   Google Workspace / Gmail
                 </span>
                 <Badge variant="outline">Read-Only</Badge>
@@ -159,7 +159,7 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
               </p>
 
               {gmailStatus?.lastSyncAt && isConnected && (
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1">
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1 font-mono">
                   <span>Last synchronized:</span>
                   <span className="font-medium text-slate-600 dark:text-slate-300">
                     {new Date(gmailStatus.lastSyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -179,6 +179,7 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
                   onClick={handleSyncGmail}
                   isLoading={isSyncing}
                   icon={<RefreshCw className="w-3.5 h-3.5" />}
+                  className="font-ui"
                 >
                   Sync Now
                 </Button>
@@ -187,7 +188,7 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
                   size="sm"
                   onClick={handleDisconnectGmail}
                   isLoading={isDisconnecting}
-                  className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                  className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-ui"
                 >
                   Disconnect
                 </Button>
@@ -199,6 +200,7 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
                 onClick={handleConnectGmail}
                 isLoading={isConnecting}
                 icon={<Plus className="w-3.5 h-3.5" />}
+                className="font-ui"
               >
                 {isRevoked ? 'Reconnect Gmail' : 'Connect Gmail'}
               </Button>
@@ -207,14 +209,14 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
         </div>
 
         {/* Outlook Account Card (Upcoming) */}
-        <div className="p-4 rounded-xl border border-slate-200/60 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/40 opacity-75 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/40 opacity-75 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60 font-ui">
               M
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <span className="text-sm font-ui font-semibold text-slate-700 dark:text-slate-300">
                   Microsoft 365 / Outlook
                 </span>
                 <Badge variant="outline">Coming Soon</Badge>
@@ -224,7 +226,7 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
               </p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" disabled>
+          <Button variant="ghost" size="sm" disabled className="font-ui">
             Notify Me
           </Button>
         </div>

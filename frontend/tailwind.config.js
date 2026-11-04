@@ -8,6 +8,27 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Approved JIOSI Brand Palette
+        jiosi: {
+          midnight: '#0B1020',
+          navy: '#111A2E',
+          indigo: '#6366F1',
+          violet: '#8B5CF6',
+          lavender: '#EAE7FF',
+          ivory: '#F5F2ED',
+          cloud: '#F8FAFC',
+          white: '#FFFFFF',
+          graphite: '#252A35',
+          slate: '#64748B',
+          border: '#E2E8F0',
+          selected: '#EEF2FF',
+        },
+        semantic: {
+          success: '#10B981',
+          warning: '#F59E0B',
+          error: '#F43F5E',
+          info: '#0EA5E9',
+        },
         brand: {
           50: '#EEF2FF',
           100: '#E0E7FF',
@@ -56,9 +77,11 @@ export default {
         }
       },
       fontFamily: {
+        display: ['"Playfair Display"', 'Georgia', 'serif'],
+        ui: ['Manrope', 'system-ui', '-apple-system', 'sans-serif'],
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        serif: ['Newsreader', 'Georgia', 'Cambria', 'Times New Roman', 'serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        serif: ['"Playfair Display"', 'Newsreader', 'Georgia', 'Cambria', 'serif'],
+        mono: ['"Geist Mono"', '"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
         subtle: '0 1px 2px 0 rgba(0, 0, 0, 0.04)',

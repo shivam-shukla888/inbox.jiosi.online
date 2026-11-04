@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'brand' | 'ghost' | 'urgent' | 'danger' | 'ai';
+export type ButtonVariant = 'primary' | 'secondary' | 'brand' | 'violet' | 'ghost' | 'urgent' | 'danger' | 'ai';
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -23,18 +23,20 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer';
+    'inline-flex items-center justify-center font-ui font-medium rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer';
 
   const sizeStyles: Record<ButtonSize, string> = {
     xs: 'text-[11px] px-2 py-0.5 gap-1',
     sm: 'text-xs px-2.5 py-1.5 gap-1.5',
     md: 'text-xs sm:text-sm px-3.5 py-2 gap-2',
-    lg: 'text-sm sm:text-base px-4 py-2.5 gap-2.5',
+    lg: 'text-sm sm:text-base px-5 py-2.5 gap-2.5',
   };
 
   const variantStyles: Record<ButtonVariant, string> = {
     brand:
-      'bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700 border border-brand-600 shadow-sm focus:ring-brand-500 dark:bg-brand-500 dark:hover:bg-brand-600',
+      'bg-jiosi-indigo text-white hover:bg-indigo-600 active:bg-indigo-700 border border-indigo-600 shadow-sm focus:ring-indigo-500',
+    violet:
+      'bg-jiosi-violet text-white hover:bg-violet-600 active:bg-violet-700 border border-violet-600 shadow-sm focus:ring-violet-500',
     primary:
       'bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 border border-slate-900 shadow-sm focus:ring-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white dark:border-white',
     secondary:
