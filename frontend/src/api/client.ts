@@ -116,6 +116,9 @@ export class ApiClient {
   }
 
   getGoogleOAuthUrl(): string {
+    if (import.meta.env.PROD) {
+      return '/oauth2/authorization/google';
+    }
     return `${this.baseUrl}/oauth2/authorization/google`;
   }
 

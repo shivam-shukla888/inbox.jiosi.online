@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -35,6 +36,7 @@ public class SecurityConfig {
     private final UrlBasedCorsConfigurationSource corsConfigurationSource;
     private final ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider;
     private final ObjectMapper objectMapper;
+    private final String frontendUrl;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
@@ -42,7 +44,8 @@ public class SecurityConfig {
             OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler,
             UrlBasedCorsConfigurationSource corsConfigurationSource,
             ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            @Value("${app.frontend-url:http://localhost:5173}") String frontendUrl
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
@@ -50,6 +53,7 @@ public class SecurityConfig {
         this.corsConfigurationSource = corsConfigurationSource;
         this.clientRegistrationRepositoryProvider = clientRegistrationRepositoryProvider;
         this.objectMapper = objectMapper;
+        this.frontendUrl = frontendUrl;
     }
 
     @Bean
@@ -101,7 +105,7 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> {
                     clientRegistrationRepositoryProvider.ifAvailable(repo -> {
                         oauth2.authorizationEndpoint(authEndpoint -> authEndpoint
-                                .authorizationRequestResolver(new CustomOAuth2AuthorizationRequestResolver(repo))
+                                .authorizationRequestResolver(new CustomOAuth2AuthorizationRequestResolver(repo, frontendUrl))
                         );
                     });
                     oauth2.successHandler(oAuth2AuthenticationSuccessHandler);

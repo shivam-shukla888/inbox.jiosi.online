@@ -16,6 +16,12 @@ server:
       include-exception: false
 
 spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            redirect-uri: "${GOOGLE_REDIRECT_URI:https://inbox.jiosi.online/login/oauth2/code/{registrationId}}"
   jpa:
     show-sql: false
     hibernate:

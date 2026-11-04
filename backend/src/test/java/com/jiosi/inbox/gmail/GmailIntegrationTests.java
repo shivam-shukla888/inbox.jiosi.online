@@ -161,8 +161,9 @@ class GmailIntegrationTests {
 
             assertThat(request.getSession().getAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_GMAIL_CONNECT_ACTION))
                     .isEqualTo(Boolean.TRUE);
+            // SECURITY HARDENED: Resolver must NOT bind user_id from untrusted query parameters
             assertThat(request.getSession().getAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_USER_ID))
-                    .isEqualTo("11111111-1111-1111-1111-111111111111");
+                    .isNull();
         }
     }
 
