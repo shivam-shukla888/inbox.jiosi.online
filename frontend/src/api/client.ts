@@ -1,7 +1,7 @@
 import { HealthApiResponse } from '../types/health';
 import { EmailThread, GmailStatusData, GmailMessagesPageData, GmailMessageDetail } from '../types/email';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:8080');
 export const DEFAULT_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000001';
 
 export interface HealthCheckResult {

@@ -1,0 +1,34 @@
+# ===================================================================
+# JIOSI Inbox - Production Profile Configuration (spring.profiles.active=prod)
+# ===================================================================
+server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        secure: true
+        http-only: true
+        same-site: lax
+    error:
+      include-message: never
+      include-binding-errors: never
+      include-stacktrace: never
+      include-exception: false
+
+spring:
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+
+logging:
+  level:
+    root: INFO
+    com.jiosi.inbox: INFO
+    org.flywaydb: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.security: WARN
+
