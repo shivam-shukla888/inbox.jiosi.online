@@ -22,21 +22,21 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
   return (
     <div
       onClick={onSelect}
-      className={`group relative flex items-start gap-3 px-4 py-3.5 border-b border-slate-100 dark:border-slate-800/80 cursor-pointer transition-all select-none ${
+      className={`group relative flex items-start gap-3 px-4 py-3.5 border-b border-slate-100 cursor-pointer transition-all select-none ${
         isSelected
-          ? 'bg-jiosi-selected dark:bg-slate-800/90 border-l-[3px] border-l-jiosi-indigo dark:border-l-indigo-400 pl-[13px]'
-          : 'bg-white dark:bg-slate-900 hover:bg-slate-50/80 dark:hover:bg-slate-850/60'
+          ? 'bg-jiosi-selected border-l-[3px] border-l-jiosi-indigo pl-[13px]'
+          : 'bg-white hover:bg-slate-50/90'
       }`}
     >
       {/* Action / State Indicators (Left Column) */}
       <div className="flex flex-col items-center gap-2 pt-0.5 shrink-0">
         <button
           onClick={onToggleCheck}
-          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5 rounded cursor-pointer"
+          className="text-slate-400 hover:text-slate-600 transition-colors p-0.5 rounded cursor-pointer"
           aria-label={isChecked ? 'Deselect thread' : 'Select thread'}
         >
           {isChecked ? (
-            <CheckSquare className="w-3.5 h-3.5 text-jiosi-indigo dark:text-indigo-400" />
+            <CheckSquare className="w-3.5 h-3.5 text-jiosi-indigo" />
           ) : (
             <Square className="w-3.5 h-3.5 opacity-30 group-hover:opacity-80 transition-opacity" />
           )}
@@ -45,12 +45,12 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
         {/* Action Status Indicator */}
         {email.isNeedsReply ? (
           <span
-            className="w-2 h-2 rounded-full bg-action-urgent ring-2 ring-red-100 dark:ring-red-950/80 shrink-0"
+            className="w-2 h-2 rounded-full bg-action-urgent ring-2 ring-red-100 shrink-0"
             title="Needs Reply (Actionable)"
           />
         ) : email.isUnread ? (
           <span
-            className="w-2 h-2 rounded-full bg-action-unread ring-2 ring-blue-100 dark:ring-blue-950/80 shrink-0"
+            className="w-2 h-2 rounded-full bg-action-unread ring-2 ring-blue-100 shrink-0"
             title="Unread"
           />
         ) : (
@@ -66,14 +66,14 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
             <span
               className={`text-xs sm:text-[13px] font-ui truncate ${
                 email.isUnread
-                  ? 'font-bold text-slate-950 dark:text-slate-50'
-                  : 'font-medium text-slate-700 dark:text-slate-300'
+                  ? 'font-bold text-slate-900'
+                  : 'font-medium text-slate-700'
               }`}
             >
               {email.isDraft ? `Draft: ${email.recipient.email}` : email.isSent ? `To: ${email.recipient.name}` : email.sender.name}
             </span>
 
-            {/* Restrained Star Icon */}
+            {/* Star Icon */}
             <button
               onClick={onToggleStar}
               className="p-0.5 rounded text-slate-300 hover:text-amber-500 transition-colors shrink-0 cursor-pointer"
@@ -83,13 +83,13 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
                 className={`w-3.5 h-3.5 ${
                   email.isStarred
                     ? 'text-amber-500 fill-amber-500'
-                    : 'text-slate-300 dark:text-slate-600 opacity-40 group-hover:opacity-100'
+                    : 'text-slate-300 opacity-40 group-hover:opacity-100'
                 }`}
               />
             </button>
           </div>
 
-          <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500 tabular-nums shrink-0">
+          <span className="font-mono text-[11px] text-slate-400 tabular-nums shrink-0">
             {email.timestamp}
           </span>
         </div>
@@ -98,36 +98,36 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
         <p
           className={`text-xs sm:text-[13px] truncate my-0.5 leading-snug ${
             email.isUnread
-              ? 'font-semibold text-slate-900 dark:text-slate-100'
-              : 'font-normal text-slate-600 dark:text-slate-300'
+              ? 'font-semibold text-slate-900'
+              : 'font-normal text-slate-600'
           }`}
         >
           {email.subject || '(No subject)'}
         </p>
 
         {/* Clean one-line preview */}
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-relaxed font-light">
+        <p className="text-[11px] text-slate-500 line-clamp-1 leading-relaxed font-light">
           {email.snippet}
         </p>
 
-        {/* Context Badges (Restrained) */}
+        {/* Context Badges */}
         <div className="flex items-center justify-between gap-2 mt-1.5 pt-0.5">
           <div className="flex items-center gap-1.5 overflow-hidden">
             {email.isNeedsReply && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/80 dark:border-rose-900/60">
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
                 Needs Reply
               </span>
             )}
 
             {email.isSnoozed && email.snoozedUntil && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-slate-600 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200">
                 <Clock className="w-2.5 h-2.5 text-slate-400" />
                 Until {email.snoozedUntil}
               </span>
             )}
 
             {email.isDraft && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-jiosi-indigo dark:text-indigo-400 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800">
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-jiosi-indigo px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200">
                 <FileEdit className="w-2.5 h-2.5" />
                 Draft · {email.lastEdited}
               </span>
@@ -135,7 +135,7 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
           </div>
 
           {email.attachments && email.attachments.length > 0 && (
-            <div className="flex items-center gap-0.5 text-slate-400 dark:text-slate-500 shrink-0">
+            <div className="flex items-center gap-0.5 text-slate-400 shrink-0">
               <Paperclip className="w-3 h-3" />
               <span className="font-mono text-[10px]">{email.attachments.length}</span>
             </div>

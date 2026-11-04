@@ -58,7 +58,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
 
   if (!email) {
     return (
-      <div className="h-full flex items-center justify-center bg-jiosi-cloud dark:bg-canvas-dark">
+      <div className="h-full flex items-center justify-center bg-white">
         <EmptyState
           title="Select an email to read"
           description="Choose a message from the thread list or use shortcuts (J/K) to navigate."
@@ -117,27 +117,27 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-slate-900 overflow-hidden font-sans">
+    <div className="h-full flex flex-col bg-white overflow-hidden font-sans">
       {/* Top Reading Pane Toolbar */}
-      <div className="h-14 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between gap-3 bg-white dark:bg-slate-900 shrink-0">
+      <div className="h-14 border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between gap-3 bg-white shrink-0">
         <div className="flex items-center gap-2 overflow-hidden">
           {/* Back button for mobile */}
           {onBackToList && (
             <button
               onClick={onBackToList}
-              className="md:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="md:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
               aria-label="Back to thread list"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
 
-          <h2 className="text-sm sm:text-base font-ui font-semibold text-slate-900 dark:text-slate-100 truncate" title={email.subject}>
+          <h2 className="text-sm sm:text-base font-ui font-semibold text-slate-900 truncate" title={email.subject}>
             {email.subject || '(No subject)'}
           </h2>
 
           {email.isNeedsReply && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/80 dark:border-rose-900/60 shrink-0">
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
               Needs Reply
             </span>
           )}
@@ -150,7 +150,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
             variant="secondary"
             size="sm"
             onClick={() => setIsReplyOpen(true)}
-            icon={<Reply className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />}
+            icon={<Reply className="w-3.5 h-3.5 text-slate-600" />}
             title="Reply (R)"
           >
             <span className="hidden sm:inline">Reply</span>
@@ -161,7 +161,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => onArchive(email.id)}
-            icon={<Archive className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
+            icon={<Archive className="w-4 h-4 text-slate-500" />}
             title="Archive (E)"
             aria-label="Archive"
           >
@@ -175,7 +175,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                 variant="secondary"
                 size="sm"
                 onClick={() => onUnsnooze?.(email.id)}
-                icon={<Clock className="w-4 h-4 text-jiosi-indigo dark:text-indigo-400" />}
+                icon={<Clock className="w-4 h-4 text-jiosi-indigo" />}
                 title="Unsnooze and return to Inbox"
               >
                 <span className="hidden sm:inline">Unsnooze</span>
@@ -185,7 +185,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsSnoozeMenuOpen(!isSnoozeMenuOpen)}
-                icon={<Clock className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
+                icon={<Clock className="w-4 h-4 text-slate-500" />}
                 title="Snooze thread (H)"
                 aria-label="Snooze"
               >
@@ -200,8 +200,8 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                   className="fixed inset-0 z-30"
                   onClick={() => setIsSnoozeMenuOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-dropdown z-40 py-1.5 text-xs">
-                  <div className="px-3 py-1.5 text-[11px] font-medium text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl z-40 py-1.5 text-xs">
+                  <div className="px-3 py-1.5 text-[11px] font-medium text-slate-400 border-b border-slate-100">
                     Snooze until...
                   </div>
                   <button
@@ -209,7 +209,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                       setIsSnoozeMenuOpen(false);
                       onSnooze?.(email.id, 'Tomorrow, 9:00 AM');
                     }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-left cursor-pointer"
+                    className="w-full flex items-center justify-between px-3 py-2 text-slate-700 hover:bg-slate-50 text-left cursor-pointer"
                   >
                     <span>Tomorrow morning</span>
                     <span className="text-[10px] text-slate-400 font-mono">9:00 AM</span>
@@ -219,7 +219,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                       setIsSnoozeMenuOpen(false);
                       onSnooze?.(email.id, 'Friday, 2:00 PM');
                     }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-left cursor-pointer"
+                    className="w-full flex items-center justify-between px-3 py-2 text-slate-700 hover:bg-slate-50 text-left cursor-pointer"
                   >
                     <span>Later this week</span>
                     <span className="text-[10px] text-slate-400 font-mono">Fri 2:00 PM</span>
@@ -229,7 +229,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                       setIsSnoozeMenuOpen(false);
                       onSnooze?.(email.id, 'Next Monday, 9:00 AM');
                     }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-left cursor-pointer"
+                    className="w-full flex items-center justify-between px-3 py-2 text-slate-700 hover:bg-slate-50 text-left cursor-pointer"
                   >
                     <span>Next week</span>
                     <span className="text-[10px] text-slate-400 font-mono">Mon 9:00 AM</span>
@@ -270,30 +270,30 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
       </div>
 
       {/* Main Email Scrollable View with max-w-3xl for reading comfort */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6">
+      <div className="flex-1 overflow-y-auto px-6 sm:px-10 py-8 bg-white">
         <div className="max-w-3xl w-full mx-auto space-y-6">
           {/* Header Metadata */}
-          <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-jiosi-indigo to-jiosi-violet text-white flex items-center justify-center font-ui font-semibold text-xs shrink-0 shadow-xs">
+          <div className="flex items-start justify-between gap-4 pb-5 border-b border-slate-100">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-jiosi-indigo to-jiosi-violet text-white flex items-center justify-center font-ui font-bold text-xs shrink-0 shadow-sm shadow-indigo-100">
                 {email.sender.avatar || email.sender.name.slice(0, 2).toUpperCase()}
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-ui font-semibold text-slate-900 dark:text-slate-100">
+                  <span className="text-base font-ui font-semibold text-slate-900">
                     {email.sender.name}
                   </span>
                   {email.sender.role && (
-                    <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                      · {email.sender.role}
+                    <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                      {email.sender.role}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                <p className="text-xs text-slate-500 font-mono mt-0.5">
                   {email.sender.email}
                 </p>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                  To: <span className="text-slate-600 dark:text-slate-300 font-medium">{email.recipient.name} ({email.recipient.email})</span>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  To: <span className="text-slate-700 font-medium">{email.recipient.name} ({email.recipient.email})</span>
                   {email.cc && email.cc.length > 0 && (
                     <span> · CC: {email.cc.join(', ')}</span>
                   )}
@@ -302,11 +302,11 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
             </div>
 
             <div className="text-right shrink-0">
-              <span className="text-xs font-mono text-slate-500 dark:text-slate-400 block tabular-nums">
+              <span className="text-xs font-mono text-slate-500 block tabular-nums">
                 {email.date} · {email.timestamp}
               </span>
               {email.isSnoozed && email.snoozedUntil && (
-                <span className="text-[11px] font-mono text-jiosi-indigo dark:text-indigo-400 mt-1 block">
+                <span className="text-[11px] font-mono text-jiosi-indigo mt-1 block font-medium">
                   Snoozed until {email.snoozedUntil}
                 </span>
               )}
@@ -314,8 +314,8 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
           </div>
 
           {/* Contextual AI Productivity Bar */}
-          <div className="p-3 rounded-2xl bg-slate-50/90 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2 text-xs font-ui font-medium text-slate-700 dark:text-slate-300">
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-violet-50/90 to-indigo-50/60 border border-violet-100 flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2 text-xs font-ui font-semibold text-slate-800">
               <Sparkles className="w-4 h-4 text-jiosi-violet" />
               <span>AI Productivity Tools</span>
             </div>
@@ -326,7 +326,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                 size="sm"
                 onClick={() => setShowSummary(!showSummary)}
                 icon={<Sparkles className="w-3.5 h-3.5 text-jiosi-violet" />}
-                className="font-ui"
+                className="font-ui font-medium"
               >
                 {showSummary ? 'Hide Summary' : '✨ Summarize'}
               </Button>
@@ -336,7 +336,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                 size="sm"
                 onClick={() => generateDraftByTone(selectedTone)}
                 icon={<Reply className="w-3.5 h-3.5 text-jiosi-indigo" />}
-                className="font-ui"
+                className="font-ui font-medium"
               >
                 Draft Reply
               </Button>
@@ -346,7 +346,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                 size="sm"
                 onClick={() => setShowActionItems(!showActionItems)}
                 icon={<ListTodo className="w-3.5 h-3.5" />}
-                className="font-ui"
+                className="font-ui font-medium"
               >
                 {showActionItems ? 'Hide Actions' : 'Action Items'}
               </Button>
@@ -355,21 +355,21 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
 
           {/* AI Summary Card (Expandable) */}
           {showSummary && email.aiSummary && (
-            <div className="p-4.5 rounded-2xl bg-gradient-to-r from-violet-50/70 to-indigo-50/40 dark:from-slate-800/80 dark:to-slate-800/50 border border-violet-200/70 dark:border-slate-700 animate-in fade-in">
+            <div className="p-4.5 rounded-2xl bg-violet-50/80 border border-violet-200 animate-in fade-in">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-ui font-semibold text-violet-950 dark:text-violet-200 flex items-center gap-1.5">
+                <span className="text-xs font-ui font-bold text-violet-950 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-jiosi-violet" />
                   AI Key Takeaways
                 </span>
                 <button
                   onClick={() => setShowSummary(false)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+                  className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
                   aria-label="Close summary"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-light">
+              <p className="text-xs text-slate-700 leading-relaxed font-light">
                 {email.aiSummary}
               </p>
             </div>
@@ -377,24 +377,24 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
 
           {/* AI Action Items Card (Expandable) */}
           {showActionItems && email.actionItems && email.actionItems.length > 0 && (
-            <div className="p-4.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 animate-in fade-in">
+            <div className="p-4.5 rounded-2xl bg-slate-50 border border-slate-200 animate-in fade-in">
               <div className="flex items-center justify-between mb-2.5">
-                <span className="text-xs font-ui font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                <span className="text-xs font-ui font-bold text-slate-900 flex items-center gap-1.5">
                   <ListTodo className="w-3.5 h-3.5 text-jiosi-indigo" />
                   Identified Action Items ({email.actionItems.length})
                 </span>
                 <button
                   onClick={() => setShowActionItems(false)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+                  className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
                   aria-label="Close action items"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 font-light">
+              <ul className="space-y-1.5 text-xs text-slate-700 font-light">
                 {email.actionItems.map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-semantic-success mt-0.5 shrink-0" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -403,21 +403,21 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
           )}
 
           {/* Email Body */}
-          <div className="text-sm sm:text-[15px] text-slate-800 dark:text-slate-200 leading-relaxed sm:leading-7 whitespace-pre-line font-light">
+          <div className="text-sm sm:text-base text-slate-800 leading-relaxed sm:leading-8 whitespace-pre-line font-light">
             {email.body}
           </div>
 
           {/* Attachment Cards */}
           {email.attachments && email.attachments.length > 0 && (
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
-              <p className="text-xs font-ui font-semibold text-slate-500 dark:text-slate-400">
+            <div className="pt-5 border-t border-slate-100 space-y-2.5">
+              <p className="text-xs font-ui font-semibold text-slate-600">
                 Attachments ({email.attachments.length})
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {email.attachments.map((att) => (
                   <div
                     key={att.id}
-                    className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-100/90 transition-colors"
                   >
                     <div className="flex items-center gap-2.5 overflow-hidden">
                       {att.type === 'xlsx' ? (
@@ -426,7 +426,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                         <FileText className="w-5 h-5 text-jiosi-indigo shrink-0" />
                       )}
                       <div className="overflow-hidden">
-                        <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
+                        <p className="text-xs font-medium text-slate-800 truncate">
                           {att.filename}
                         </p>
                         <p className="text-[10px] text-slate-400 font-mono">{att.size}</p>
@@ -434,7 +434,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                     </div>
                     <button
                       onClick={() => onNotify?.(`Downloading ${att.filename}...`, 'info')}
-                      className="p-1.5 text-slate-400 hover:text-jiosi-indigo dark:hover:text-indigo-400 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-slate-400 hover:text-jiosi-indigo rounded-lg transition-colors cursor-pointer"
                       title={`Download ${att.filename}`}
                       aria-label={`Download ${att.filename}`}
                     >
@@ -447,12 +447,12 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
           )}
 
           {/* Inline Reply Composer */}
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="pt-5 border-t border-slate-200">
             {!isReplyOpen ? (
-              <div className="flex items-center justify-between p-3.5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-400 dark:hover:border-slate-600 transition-colors">
+              <div className="flex items-center justify-between p-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 hover:bg-slate-100/70 hover:border-slate-400 transition-colors">
                 <button
                   onClick={() => setIsReplyOpen(true)}
-                  className="flex items-center gap-2.5 text-xs font-ui text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
+                  className="flex items-center gap-2.5 text-xs font-ui text-slate-600 hover:text-slate-900 cursor-pointer"
                 >
                   <Reply className="w-4 h-4 text-jiosi-indigo" />
                   <span>Click here or press <Kbd>R</Kbd> to reply...</span>
@@ -470,11 +470,11 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/60 shadow-xs space-y-3">
-                <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/80 dark:border-slate-700/80">
-                  <div className="flex items-center gap-2 text-xs font-ui font-medium text-slate-700 dark:text-slate-300">
+              <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-3">
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                  <div className="flex items-center gap-2 text-xs font-ui font-medium text-slate-700">
                     <Reply className="w-3.5 h-3.5 text-jiosi-indigo" />
-                    <span>Replying to <span className="font-semibold text-slate-900 dark:text-slate-100">{email.sender.name}</span></span>
+                    <span>Replying to <span className="font-semibold text-slate-900">{email.sender.name}</span></span>
                   </div>
 
                   {/* Tone Selector Chips */}
@@ -491,7 +491,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                         className={`px-2.5 py-1 rounded-lg text-[11px] font-ui font-medium capitalize transition-all cursor-pointer ${
                           selectedTone === tone
                             ? 'bg-jiosi-indigo text-white shadow-xs'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                            : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
                         }`}
                       >
                         {tone}
@@ -505,7 +505,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="Write your reply or choose an AI tone above... (Press ⌘↵ to send)"
-                  className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-sm rounded-xl p-3.5 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-jiosi-indigo/20 focus:border-jiosi-indigo resize-y font-sans"
+                  className="w-full bg-slate-50/50 text-slate-900 text-sm rounded-xl p-3.5 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-jiosi-indigo/20 focus:border-jiosi-indigo resize-y font-sans"
                 />
 
                 <div className="flex items-center justify-between pt-1">
@@ -520,13 +520,13 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
 
                   <div className="flex items-center gap-2">
                     <Button
-                      variant="brand"
+                      variant="violet"
                       size="sm"
                       onClick={handleSend}
                       disabled={!replyText.trim() || isGeneratingDraft}
                       icon={<SendHorizontal className="w-3.5 h-3.5" />}
                       shortcut="⌘↵"
-                      className="font-ui"
+                      className="font-ui font-medium text-white shadow-sm"
                     >
                       Send Reply
                     </Button>

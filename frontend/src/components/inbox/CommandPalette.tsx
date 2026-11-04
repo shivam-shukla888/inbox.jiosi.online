@@ -130,7 +130,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         id: 'toggle-theme',
         label: 'Toggle Light / Dark Theme',
         category: 'Appearance',
-        icon: <Sun className="w-4 h-4 text-amber-400" />,
+        icon: <Sun className="w-4 h-4 text-amber-500" />,
         shortcut: 'T',
         run: () => {
           onToggleTheme();
@@ -170,27 +170,27 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
       <div
         className="fixed inset-0"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[80vh]">
+      <div className="relative w-full max-w-xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[80vh]">
         {/* Search Input Bar */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 bg-white">
           <Search className="w-5 h-5 text-slate-400 shrink-0" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Type a command or search emails, senders, files..."
-            className="w-full text-sm bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none font-sans"
+            className="w-full text-sm bg-transparent text-slate-900 placeholder:text-slate-400 focus:outline-none font-sans"
             autoFocus
           />
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              className="p-1 rounded text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -199,7 +199,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         </div>
 
         {/* Content list */}
-        <div className="overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 p-2 text-xs">
+        <div className="overflow-y-auto divide-y divide-slate-100 p-2 text-xs bg-white">
           {/* Recent Searches (when query empty) */}
           {!query && recentSearches.length > 0 && (
             <div className="p-2 space-y-1">
@@ -211,7 +211,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   <button
                     key={i}
                     onClick={() => handleSelectRecent(term)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer text-xs font-ui"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer text-xs font-ui"
                   >
                     <History className="w-3 h-3 text-slate-400" />
                     <span>{term}</span>
@@ -234,15 +234,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     onSelectEmail(email.id);
                     onClose();
                   }}
-                  className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left cursor-pointer"
+                  className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors text-left cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5 overflow-hidden">
                     <Mail className="w-4 h-4 text-jiosi-indigo shrink-0" />
                     <div className="overflow-hidden">
-                      <p className="font-ui font-medium text-slate-900 dark:text-slate-100 truncate">
+                      <p className="font-ui font-medium text-slate-900 truncate">
                         {email.subject}
                       </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-light">
+                      <p className="text-[11px] text-slate-500 truncate font-light">
                         {email.sender.name} · {email.snippet}
                       </p>
                     </div>
@@ -264,11 +264,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <button
                 key={action.id}
                 onClick={action.run}
-                className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left cursor-pointer"
+                className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors text-left cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
                   {action.icon}
-                  <span className="font-ui text-slate-800 dark:text-slate-200">
+                  <span className="font-ui text-slate-800">
                     {action.label}
                   </span>
                 </div>
@@ -285,7 +285,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         </div>
 
         {/* Footer info */}
-        <div className="px-4 py-2 bg-slate-50 dark:bg-slate-850 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+        <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-mono">
           <span>Navigate with ↑↓ · Select with ↵</span>
           <span>JIOSI Search v0.2</span>
         </div>

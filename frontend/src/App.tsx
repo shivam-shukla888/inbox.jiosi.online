@@ -29,11 +29,11 @@ export type AuthState = 'INITIALIZING' | 'AUTHENTICATED' | 'UNAUTHENTICATED' | '
 export const App: React.FC = () => {
   // Authentication State Machine
   const [authState, setAuthState] = useState<AuthState>('INITIALIZING');
-  // Theme state: initialized from localStorage or prefers-color-scheme
+  // Theme state: initialized from localStorage (defaulting to false / light)
   const [isDark, setIsDark] = useState<boolean>(() => {
     const saved = localStorage.getItem('jiosi_theme');
     if (saved) return saved === 'dark';
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return false;
   });
 
   // Apply dark class to <html> root

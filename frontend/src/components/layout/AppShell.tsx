@@ -20,7 +20,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   isMobileDetailOpen = false,
 }) => {
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-canvas-dark text-slate-900 dark:text-slate-100">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC] text-slate-900 font-sans antialiased">
       {/* 1. Left Sidebar Navigation */}
       {sidebar}
 
@@ -31,14 +31,14 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         {/* Custom view (e.g. Settings / Connected Accounts) or 3-panel Mail Workspace */}
         {customView ? (
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col pb-16 lg:pb-0">
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col pb-16 lg:pb-0 bg-[#F8FAFC]">
             {customView}
           </div>
         ) : (
-          <div className="flex flex-1 min-h-0 overflow-hidden pb-16 lg:pb-0">
+          <div className="flex flex-1 min-h-0 overflow-hidden pb-16 lg:pb-0 bg-[#F8FAFC]">
             {/* Center: Email Thread List */}
             <div
-              className={`w-full md:w-[380px] lg:w-[420px] shrink-0 h-full border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden ${
+              className={`w-full md:w-[380px] lg:w-[420px] shrink-0 h-full border-r border-slate-200 bg-white overflow-hidden shadow-2xs ${
                 isMobileDetailOpen ? 'hidden md:block' : 'block'
               }`}
             >
@@ -47,7 +47,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
             {/* Right: Reading Pane */}
             <div
-              className={`flex-1 min-w-0 h-full overflow-hidden bg-white dark:bg-slate-900 ${
+              className={`flex-1 min-w-0 h-full overflow-hidden bg-white ${
                 isMobileDetailOpen ? 'block' : 'hidden md:flex'
               }`}
             >
@@ -56,7 +56,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
         )}
 
-        {/* Screen 12: Mobile Bottom Navigation Bar */}
+        {/* Mobile Bottom Navigation Bar */}
         {mobileNavigation}
       </div>
     </div>

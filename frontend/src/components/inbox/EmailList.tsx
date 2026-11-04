@@ -49,7 +49,7 @@ export const EmailList: React.FC<EmailListProps> = ({
     'needs-reply': {
       title: 'No pending replies',
       description: 'All urgent responses have been handled.',
-      icon: <Send className="w-8 h-8 text-brand-500" />,
+      icon: <Send className="w-8 h-8 text-rose-500" />,
     },
     starred: {
       title: 'No starred emails',
@@ -76,7 +76,7 @@ export const EmailList: React.FC<EmailListProps> = ({
   const empty = emptyStateConfig[currentFolder] || emptyStateConfig.inbox;
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900 overflow-hidden">
+    <div className="flex flex-col h-full bg-white overflow-hidden">
       {/* Category filters shown primarily in inbox */}
       {currentFolder === 'inbox' && (
         <EmailFilters
@@ -92,7 +92,7 @@ export const EmailList: React.FC<EmailListProps> = ({
       )}
 
       {/* Email Feed */}
-      <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
+      <div className="flex-1 overflow-y-auto divide-y divide-slate-100 bg-white">
         {isLoading ? (
           <LoadingSpinner label="Fetching inbox threads..." />
         ) : emails.length === 0 ? (
