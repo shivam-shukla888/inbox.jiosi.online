@@ -20,8 +20,9 @@ import java.util.Set;
  * Distinguishes between standard login (openid, profile, email) and Gmail mailbox connection
  * (https://www.googleapis.com/auth/gmail.readonly) with offline access for refresh token issuance.
  *
- * Ensures the OAuth redirect_uri matches the public frontend domain in production so that
- * session cookies (JSESSIONID) remain first-party and valid across redirects.
+ * Ensures the OAuth redirect_uri matches the public frontend domain in production using strict
+ * URI origin comparison (scheme, host, effective port) so that session cookies (JSESSIONID)
+ * remain first-party and valid across redirects.
  */
 public class CustomOAuth2AuthorizationRequestResolver implements OAuth2AuthorizationRequestResolver {
 
@@ -32,6 +33,10 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
 
     private final DefaultOAuth2AuthorizationRequestResolver defaultResolver;
     private final String frontendUrl;
+    private final String frontendScheme;
+    private final String frontendHost;
+    private final int frontendEffectivePort;
+    private final boolean isProductionHttps;
 
     public CustomOAuth2AuthorizationRequestResolver(ClientRegistrationRepository clientRegistrationRepository) {
         this(clientRegistrationRepository, null);
@@ -43,6 +48,45 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
                 "/oauth2/authorization"
         );
         this.frontendUrl = frontendUrl != null ? frontendUrl.trim() : null;
+
+        if (this.frontendUrl != null && !this.frontendUrl.isBlank()) {
+            URI parsed;
+            try {
+                parsed = new URI(this.frontendUrl);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Malformed frontend URL: " + frontendUrl, e);
+            }
+
+            String scheme = parsed.getScheme();
+            if (scheme == null || (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme))) {
+                throw new IllegalArgumentException("Invalid frontend URL scheme (must be http or https): " + frontendUrl);
+            }
+
+            if (parsed.getUserInfo() != null) {
+                throw new IllegalArgumentException("Frontend URL must not contain user credentials: " + frontendUrl);
+            }
+
+            String host = parsed.getHost();
+            if (host == null || host.isBlank()) {
+                throw new IllegalArgumentException("Frontend URL must contain a valid host: " + frontendUrl);
+            }
+
+            if (parsed.getRawQuery() != null || parsed.getRawFragment() != null) {
+                throw new IllegalArgumentException("Frontend URL must not contain query parameters or fragments: " + frontendUrl);
+            }
+
+            this.frontendScheme = scheme.toLowerCase();
+            this.frontendHost = host.toLowerCase();
+            this.frontendEffectivePort = parsed.getPort() != -1
+                    ? parsed.getPort()
+                    : ("https".equalsIgnoreCase(this.frontendScheme) ? 443 : 80);
+            this.isProductionHttps = "https".equalsIgnoreCase(this.frontendScheme);
+        } else {
+            this.frontendScheme = null;
+            this.frontendHost = null;
+            this.frontendEffectivePort = -1;
+            this.isProductionHttps = false;
+        }
     }
 
     @Override
@@ -65,27 +109,49 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
         OAuth2AuthorizationRequest.Builder builder = OAuth2AuthorizationRequest.from(req);
 
         // Align redirectUri to public frontend domain in production when behind a reverse proxy
-        if (frontendUrl != null && !frontendUrl.isBlank()) {
+        if (isProductionHttps && req.getRedirectUri() != null) {
             String currentRedirectUri = req.getRedirectUri();
-            // If the frontend is configured as a public HTTPS domain (e.g., https://inbox.jiosi.online)
-            // and the generated redirectUri points to an internal/backend host (e.g., onrender.com),
-            // align the redirectUri to route through the frontend proxy to keep session cookies first-party
-            if (currentRedirectUri != null && frontendUrl.startsWith("https://") && !currentRedirectUri.startsWith(frontendUrl)) {
-                String cleanFrontend = frontendUrl.endsWith("/") ? frontendUrl.substring(0, frontendUrl.length() - 1) : frontendUrl;
-                try {
-                    URI uri = URI.create(currentRedirectUri);
-                    String alignedRedirectUri = cleanFrontend + uri.getRawPath();
-                    builder.redirectUri(alignedRedirectUri);
-                } catch (Exception ignored) {
-                    // Fallback to configured redirectUri
+            try {
+                URI currentUri = new URI(currentRedirectUri);
+                String currentScheme = currentUri.getScheme() != null ? currentUri.getScheme().toLowerCase() : "";
+                String currentHost = currentUri.getHost() != null ? currentUri.getHost().toLowerCase() : "";
+                int currentPort = currentUri.getPort() != -1
+                        ? currentUri.getPort()
+                        : ("https".equalsIgnoreCase(currentScheme) ? 443 : 80);
+
+                boolean originMatches = frontendScheme.equals(currentScheme)
+                        && frontendHost.equals(currentHost)
+                        && frontendEffectivePort == currentPort;
+
+                if (!originMatches) {
+                    // Extract and sanitize path - ensure it's a valid OAuth callback path
+                    String rawPath = currentUri.getRawPath();
+                    String safePath = (rawPath != null && rawPath.startsWith("/login/oauth2/code/"))
+                            ? rawPath
+                            : "/login/oauth2/code/" + req.getAttribute("registration_id");
+
+                    if (safePath == null || !safePath.startsWith("/login/oauth2/code/")) {
+                        safePath = "/login/oauth2/code/google";
+                    }
+
+                    StringBuilder aligned = new StringBuilder();
+                    aligned.append(frontendScheme).append("://").append(frontendHost);
+                    if ((frontendEffectivePort != 443 && "https".equals(frontendScheme))
+                            || (frontendEffectivePort != 80 && "http".equals(frontendScheme))) {
+                        aligned.append(":").append(frontendEffectivePort);
+                    }
+                    aligned.append(safePath);
+
+                    builder.redirectUri(aligned.toString());
                 }
+            } catch (Exception e) {
+                // If URI parsing fails, fail closed in production by forcing safe frontend callback
+                builder.redirectUri(frontendScheme + "://" + frontendHost + "/login/oauth2/code/google");
             }
         }
 
         String action = request.getParameter("action");
         String scopeParam = request.getParameter("scope");
-        String userIdParam = request.getParameter("user_id");
-        String workspaceIdParam = request.getParameter("workspace_id");
 
         boolean isGmailConnect = "connect_gmail".equalsIgnoreCase(action)
                 || (scopeParam != null && scopeParam.contains("gmail"));
@@ -102,12 +168,10 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
 
             HttpSession session = request.getSession(true);
             session.setAttribute(SESSION_GMAIL_CONNECT_ACTION, Boolean.TRUE);
-            if (userIdParam != null && !userIdParam.isBlank()) {
-                session.setAttribute(SESSION_CONNECTING_USER_ID, userIdParam.trim());
-            }
-            if (workspaceIdParam != null && !workspaceIdParam.isBlank()) {
-                session.setAttribute(SESSION_CONNECTING_WORKSPACE_ID, workspaceIdParam.trim());
-            }
+
+            // SECURITY HARDENING: Never read user_id or workspace_id from query parameters.
+            // Pending Gmail linking must only be bound to authenticated server-side principal sessions
+            // created via authenticated endpoints like GmailController.getConnectUrl.
 
             builder.scopes(scopes).additionalParameters(additionalParams);
         }

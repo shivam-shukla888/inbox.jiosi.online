@@ -1,6 +1,8 @@
 package com.jiosi.inbox.security;
 
+import com.jiosi.inbox.common.ResourceNotFoundException;
 import com.jiosi.inbox.common.UnauthorizedException;
+import com.jiosi.inbox.common.WorkspaceAccessDeniedException;
 import com.jiosi.inbox.config.CustomOAuth2AuthorizationRequestResolver;
 import com.jiosi.inbox.connectedaccount.ConnectedAccount;
 import com.jiosi.inbox.connectedaccount.ConnectedAccountRepository;
@@ -51,6 +53,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
     private final TokenEncryptionService tokenEncryptionService;
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
+    private final WorkspaceAuthorizationService workspaceAuthorizationService;
     private final String frontendUrl;
 
     public OAuth2AuthenticationSuccessHandler(
@@ -61,6 +64,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             TokenEncryptionService tokenEncryptionService,
             WorkspaceRepository workspaceRepository,
             WorkspaceMemberRepository workspaceMemberRepository,
+            WorkspaceAuthorizationService workspaceAuthorizationService,
             @Value("${app.frontend-url:http://localhost:5173}") String frontendUrl
     ) {
         this.userProvisioningService = userProvisioningService;
@@ -70,6 +74,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         this.tokenEncryptionService = tokenEncryptionService;
         this.workspaceRepository = workspaceRepository;
         this.workspaceMemberRepository = workspaceMemberRepository;
+        this.workspaceAuthorizationService = workspaceAuthorizationService;
         this.frontendUrl = frontendUrl.endsWith("/") ? frontendUrl.substring(0, frontendUrl.length() - 1) : frontendUrl;
     }
 
@@ -102,27 +107,29 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             picture = (String) oauth2User.getAttributes().get("picture");
         }
 
-        if (subject == null || email == null) {
-            log.error("OAuth2 user missing subject or email. Principal attributes: {}", principal);
-            throw new UnauthorizedException("Google user missing required subject or email claims");
+        if (email == null || email.isBlank()) {
+            log.error("OAuth2 authentication succeeded but email claim is missing");
+            response.sendRedirect(frontendUrl + "/?auth_error=" + URLEncoder.encode("Email missing from OAuth provider", StandardCharsets.UTF_8));
+            return;
         }
 
         if (!emailVerified) {
-            log.warn("OAuth2 Google user email is not verified: {}", email);
-            throw new UnauthorizedException("Google account email is not verified");
+            log.warn("OAuth2 login rejected for unverified email: {}", email);
+            response.sendRedirect(frontendUrl + "/?auth_error=" + URLEncoder.encode("Google email address is not verified", StandardCharsets.UTF_8));
+            return;
         }
 
+        // Provision or sync user in database
         GoogleIdentity identity = new GoogleIdentity(
                 subject,
                 email,
-                true,
+                emailVerified,
                 name != null ? name : email,
                 picture
         );
-
         User user = userProvisioningService.linkOrCreateGoogleUser(identity);
 
-        // Bind user entity to SecurityContext
+        // Bind application User principal to SecurityContext and session
         UsernamePasswordAuthenticationToken appAuth = new UsernamePasswordAuthenticationToken(
                 user,
                 null,
@@ -131,14 +138,11 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(appAuth);
         SecurityContextHolder.setContext(context);
-        request.getSession().setAttribute(
-                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                context
-        );
 
-        // Check if this flow is a Gmail connection action
-        HttpSession session = request.getSession(false);
-        boolean isGmailAction = session != null && Boolean.TRUE.equals(
+        HttpSession session = request.getSession(true);
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+
+        boolean isGmailAction = Boolean.TRUE.equals(
                 session.getAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_GMAIL_CONNECT_ACTION)
         );
 
@@ -170,36 +174,74 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             OAuth2AuthorizedClient authorizedClient,
             String accountEmail
     ) throws IOException {
-        User targetUser = fallbackUser;
-        Workspace targetWorkspace = null;
+        String connectingUserIdParam = null;
+        String connectingWsIdParam = null;
 
         if (session != null) {
-            String userIdParam = (String) session.getAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_USER_ID);
-            if (userIdParam != null) {
-                try {
-                    targetUser = userRepository.findById(UUID.fromString(userIdParam)).orElse(fallbackUser);
-                } catch (Exception e) {
-                    log.debug("Could not resolve connecting user UUID: {}", e.getMessage());
-                }
-            }
+            connectingUserIdParam = (String) session.getAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_USER_ID);
+            connectingWsIdParam = (String) session.getAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_WORKSPACE_ID);
 
-            String wsIdParam = (String) session.getAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_WORKSPACE_ID);
-            if (wsIdParam != null) {
-                try {
-                    targetWorkspace = workspaceRepository.findById(UUID.fromString(wsIdParam)).orElse(null);
-                } catch (Exception e) {
-                    log.debug("Could not resolve connecting workspace UUID: {}", e.getMessage());
-                }
-            }
-
-            // Cleanup session flags
+            // Cleanup session flags immediately so they cannot be reused
             session.removeAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_GMAIL_CONNECT_ACTION);
             session.removeAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_USER_ID);
             session.removeAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_WORKSPACE_ID);
         }
 
-        if (targetWorkspace == null) {
+        // SECURITY CHECK 1: Ensure Gmail linking was initiated by an authenticated server-side principal session
+        if (connectingUserIdParam == null || connectingUserIdParam.isBlank()) {
+            log.warn("Gmail linking rejected: no authenticated server-side principal in session");
+            response.sendRedirect(frontendUrl + "/?auth_error=" + URLEncoder.encode("Gmail linking requires an active authenticated session", StandardCharsets.UTF_8));
+            return;
+        }
+
+        UUID connectingUserId;
+        try {
+            connectingUserId = UUID.fromString(connectingUserIdParam.trim());
+        } catch (IllegalArgumentException e) {
+            log.warn("Gmail linking rejected: invalid user ID format in session: {}", connectingUserIdParam);
+            response.sendRedirect(frontendUrl + "/?auth_error=" + URLEncoder.encode("Invalid session user ID", StandardCharsets.UTF_8));
+            return;
+        }
+
+        User targetUser = userRepository.findById(connectingUserId).orElse(null);
+        if (targetUser == null) {
+            log.warn("Gmail linking rejected: user {} not found", connectingUserId);
+            response.sendRedirect(frontendUrl + "/?auth_error=" + URLEncoder.encode("User not found", StandardCharsets.UTF_8));
+            return;
+        }
+
+        // SECURITY CHECK 2: Validate workspace membership immediately before saving
+        Workspace targetWorkspace = null;
+        if (connectingWsIdParam != null && !connectingWsIdParam.isBlank()) {
+            try {
+                UUID wsId = UUID.fromString(connectingWsIdParam.trim());
+                WorkspaceAuthorizationService.WorkspaceMemberAccess access = workspaceAuthorizationService.validateAccess(wsId, targetUser);
+                targetWorkspace = access.workspace();
+            } catch (WorkspaceAccessDeniedException ex) {
+                log.warn("Unauthorized workspace Gmail linking attempt: User {} ({}) attempted access to workspace {}",
+                        targetUser.getEmail(), targetUser.getId(), connectingWsIdParam);
+                response.sendRedirect(frontendUrl + "/?auth_error=" + URLEncoder.encode("Access denied to workspace", StandardCharsets.UTF_8));
+                return;
+            } catch (ResourceNotFoundException ex) {
+                log.warn("Workspace not found for Gmail linking: {}", connectingWsIdParam);
+                response.sendRedirect(frontendUrl + "/?auth_error=" + URLEncoder.encode("Workspace not found", StandardCharsets.UTF_8));
+                return;
+            } catch (IllegalArgumentException ex) {
+                log.warn("Invalid workspace ID in session: {}", connectingWsIdParam);
+                response.sendRedirect(frontendUrl + "/?auth_error=" + URLEncoder.encode("Invalid workspace ID", StandardCharsets.UTF_8));
+                return;
+            }
+        } else {
             targetWorkspace = resolveUserDefaultWorkspace(targetUser);
+            if (targetWorkspace != null) {
+                try {
+                    workspaceAuthorizationService.validateAccess(targetWorkspace.getId(), targetUser);
+                } catch (Exception ex) {
+                    log.warn("Default workspace validation failed for user {}: {}", targetUser.getId(), ex.getMessage());
+                    response.sendRedirect(frontendUrl + "/?auth_error=" + URLEncoder.encode("Workspace access validation failed", StandardCharsets.UTF_8));
+                    return;
+                }
+            }
         }
 
         String rawAccessToken = authorizedClient != null ? authorizedClient.getAccessToken().getTokenValue() : null;

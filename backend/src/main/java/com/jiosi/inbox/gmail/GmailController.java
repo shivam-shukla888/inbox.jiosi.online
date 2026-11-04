@@ -2,11 +2,15 @@ package com.jiosi.inbox.gmail;
 
 import com.jiosi.inbox.common.ApiResponse;
 import com.jiosi.inbox.common.UnauthorizedException;
+import com.jiosi.inbox.config.CustomOAuth2AuthorizationRequestResolver;
 import com.jiosi.inbox.gmail.dto.GmailMessageDetail;
 import com.jiosi.inbox.gmail.dto.GmailMessagesPageResponse;
 import com.jiosi.inbox.gmail.dto.GmailStatusResponse;
 import com.jiosi.inbox.security.UserContext;
+import com.jiosi.inbox.security.WorkspaceAuthorizationService;
 import com.jiosi.inbox.user.User;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -21,27 +25,47 @@ import java.util.UUID;
 public class GmailController {
 
     private final GmailService gmailService;
+    private final WorkspaceAuthorizationService workspaceAuthorizationService;
     private final String authBaseUrl;
 
     public GmailController(
             GmailService gmailService,
+            WorkspaceAuthorizationService workspaceAuthorizationService,
             @Value("${app.frontend-url:http://localhost:5173}") String frontendUrl,
             @Value("${app.backend-url:${SERVER_URL:http://localhost:8080}}") String backendBaseUrl
     ) {
         this.gmailService = gmailService;
+        this.workspaceAuthorizationService = workspaceAuthorizationService;
         String base = (frontendUrl != null && frontendUrl.startsWith("https://")) ? frontendUrl : backendBaseUrl;
         this.authBaseUrl = base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
     }
 
     @GetMapping("/connect-url")
     public ResponseEntity<ApiResponse<Map<String, String>>> getConnectUrl(
-            @RequestHeader(value = "X-Workspace-Id", required = false) UUID workspaceId
+            @RequestHeader(value = "X-Workspace-Id", required = false) UUID workspaceId,
+            HttpServletRequest request
     ) {
         User user = resolveCurrentUser();
-        String url = authBaseUrl + "/oauth2/authorization/google?action=connect_gmail&user_id=" + user.getId();
-        if (workspaceId != null) {
-            url += "&workspace_id=" + workspaceId;
+
+        // Verify workspace authorization if workspaceId is provided
+        if (workspaceId != null && workspaceAuthorizationService != null) {
+            workspaceAuthorizationService.validateAccess(workspaceId, user);
         }
+
+        // Store authenticated principal intent in server-side session
+        if (request != null) {
+            HttpSession session = request.getSession(true);
+            session.setAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_GMAIL_CONNECT_ACTION, Boolean.TRUE);
+            session.setAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_USER_ID, user.getId().toString());
+            if (workspaceId != null) {
+                session.setAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_WORKSPACE_ID, workspaceId.toString());
+            } else {
+                session.removeAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_WORKSPACE_ID);
+            }
+        }
+
+        // Return clean URL without user_id or workspace_id in query string
+        String url = authBaseUrl + "/oauth2/authorization/google?action=connect_gmail";
 
         return ResponseEntity.ok(ApiResponse.ok(
                 Map.of("connectUrl", url),
@@ -107,4 +131,3 @@ public class GmailController {
         throw new UnauthorizedException("Authentication required: missing or invalid credentials");
     }
 }
-
