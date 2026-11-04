@@ -16,6 +16,10 @@ public interface EmailThreadRepository extends JpaRepository<EmailThread, UUID> 
 
     Optional<EmailThread> findByWorkspaceIdAndId(UUID workspaceId, UUID id);
 
+    Optional<EmailThread> findByAccountIdAndExternalThreadId(UUID accountId, String externalThreadId);
+
+    Optional<EmailThread> findByWorkspaceIdAndExternalThreadId(UUID workspaceId, String externalThreadId);
+
     // 1. Inbox Folder Queries
     @Query("SELECT t FROM EmailThread t WHERE t.workspace.id = :workspaceId AND t.archived = false AND t.snoozed = false AND t.sent = false AND t.draft = false")
     Page<EmailThread> findInboxAll(@Param("workspaceId") UUID workspaceId, Pageable pageable);

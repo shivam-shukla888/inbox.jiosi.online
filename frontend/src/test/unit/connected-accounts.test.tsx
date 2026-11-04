@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ConnectedAccountsView } from '../../components/settings/ConnectedAccountsView';
-import { apiClient, AuthSessionData } from '../../api/client';
-import { GmailStatusData, GmailMessagesPageData } from '../../types/email';
+import { apiClient, AuthSessionData, GmailSyncResponse } from '../../api/client';
+import { GmailStatusData } from '../../types/email';
 
 describe('ConnectedAccountsView Component & Gmail Flow Tests', () => {
   const mockUser: AuthSessionData = {
@@ -173,42 +173,84 @@ describe('ConnectedAccountsView Component & Gmail Flow Tests', () => {
     });
   });
 
-  it('synchronizes Gmail inbox messages when connected', async () => {
+  it('synchronizes Gmail inbox messages when connected and triggers onSyncSuccess', async () => {
     vi.spyOn(apiClient, 'getGmailStatus').mockResolvedValue({
       connected: true,
       provider: 'gmail',
       status: 'CONNECTED',
       email: 'work@gmail.com',
     });
-    const mockMessages: GmailMessagesPageData = {
-      messages: [
-        {
-          id: 'msg-1',
-          threadId: 'th-1',
-          subject: 'Test Subject',
-          senderName: 'Sender',
-          senderEmail: 'sender@example.com',
-          recipientEmail: 'work@gmail.com',
-          snippet: 'Snippet...',
-          receivedAt: new Date().toISOString(),
-          isUnread: true,
-          isStarred: false,
-          labelIds: ['INBOX'],
-        },
-      ],
+    const mockSyncResult: GmailSyncResponse = {
+      syncedCount: 1,
+      newMessagesCount: 1,
+      existingMessagesCount: 0,
+      failedMessagesCount: 0,
+      nextPageToken: null,
       resultSizeEstimate: 1,
     };
-    const syncSpy = vi.spyOn(apiClient, 'getGmailMessages').mockResolvedValue(mockMessages);
+    const syncSpy = vi.spyOn(apiClient, 'syncGmail').mockResolvedValue(mockSyncResult);
 
     const onNotify = vi.fn();
-    render(<ConnectedAccountsView onNotify={onNotify} user={mockUser} />);
+    const onSyncSuccess = vi.fn();
+    render(<ConnectedAccountsView onNotify={onNotify} user={mockUser} onSyncSuccess={onSyncSuccess} />);
 
     const syncButton = await screen.findByRole('button', { name: /Sync Now/i });
     fireEvent.click(syncButton);
 
     await waitFor(() => {
-      expect(syncSpy).toHaveBeenCalledWith(15);
-      expect(onNotify).toHaveBeenCalledWith('Successfully synchronized 1 messages from Gmail Inbox.', 'success');
+      expect(syncSpy).toHaveBeenCalledWith(25);
+      expect(onNotify).toHaveBeenCalledWith('Successfully synchronized 1 new messages from Gmail Inbox.', 'success');
+      expect(onSyncSuccess).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('does not invoke onSyncSuccess when synchronization fails', async () => {
+    vi.spyOn(apiClient, 'getGmailStatus').mockResolvedValue({
+      connected: true,
+      provider: 'gmail',
+      status: 'CONNECTED',
+      email: 'work@gmail.com',
+    });
+    vi.spyOn(apiClient, 'syncGmail').mockRejectedValue(new Error('Rate limit exceeded'));
+
+    const onNotify = vi.fn();
+    const onSyncSuccess = vi.fn();
+    render(<ConnectedAccountsView onNotify={onNotify} user={mockUser} onSyncSuccess={onSyncSuccess} />);
+
+    const syncButton = await screen.findByRole('button', { name: /Sync Now/i });
+    fireEvent.click(syncButton);
+
+    await waitFor(() => {
+      expect(onNotify).toHaveBeenCalledWith('Rate limit exceeded', 'error');
+      expect(onSyncSuccess).not.toHaveBeenCalled();
+    });
+  });
+
+  it('shows up to date message when no new messages imported', async () => {
+    vi.spyOn(apiClient, 'getGmailStatus').mockResolvedValue({
+      connected: true,
+      provider: 'gmail',
+      status: 'CONNECTED',
+      email: 'work@gmail.com',
+    });
+    vi.spyOn(apiClient, 'syncGmail').mockResolvedValue({
+      syncedCount: 0,
+      newMessagesCount: 0,
+      existingMessagesCount: 5,
+      failedMessagesCount: 0,
+      resultSizeEstimate: 5,
+    });
+
+    const onNotify = vi.fn();
+    const onSyncSuccess = vi.fn();
+    render(<ConnectedAccountsView onNotify={onNotify} user={mockUser} onSyncSuccess={onSyncSuccess} />);
+
+    const syncButton = await screen.findByRole('button', { name: /Sync Now/i });
+    fireEvent.click(syncButton);
+
+    await waitFor(() => {
+      expect(onNotify).toHaveBeenCalledWith('Gmail inbox is up to date (5 messages checked).', 'info');
+      expect(onSyncSuccess).toHaveBeenCalledTimes(1);
     });
   });
 });

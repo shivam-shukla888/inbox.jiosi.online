@@ -8,9 +8,10 @@ import { AuthSessionData, apiClient } from '../../api/client';
 interface ConnectedAccountsViewProps {
   onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
   user?: AuthSessionData | null;
+  onSyncSuccess?: () => void;
 }
 
-export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ onNotify, user }) => {
+export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ onNotify, user, onSyncSuccess }) => {
   const [gmailStatus, setGmailStatus] = useState<GmailStatusData | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -81,10 +82,15 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
     if (isSyncing) return;
     setIsSyncing(true);
     try {
-      const res = await apiClient.getGmailMessages(15);
-      const count = res?.messages?.length || 0;
+      const res = await apiClient.syncGmail(25);
       setGmailStatus((prev) => prev ? { ...prev, lastSyncAt: new Date().toISOString() } : null);
-      onNotify?.(`Successfully synchronized ${count} messages from Gmail Inbox.`, 'success');
+      if (res && res.newMessagesCount > 0) {
+        onNotify?.(`Successfully synchronized ${res.newMessagesCount} new messages from Gmail Inbox.`, 'success');
+      } else {
+        const count = res?.existingMessagesCount ?? 0;
+        onNotify?.(`Gmail inbox is up to date (${count} messages checked).`, 'info');
+      }
+      onSyncSuccess?.();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to synchronize Gmail inbox';
       onNotify?.(msg, 'error');

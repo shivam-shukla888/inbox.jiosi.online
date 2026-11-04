@@ -4,14 +4,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.jiosi.inbox.common.ResourceNotFoundException;
 import com.jiosi.inbox.connectedaccount.ConnectedAccount;
 import com.jiosi.inbox.connectedaccount.ConnectedAccountRepository;
-import com.jiosi.inbox.gmail.dto.GmailMessageDetail;
-import com.jiosi.inbox.gmail.dto.GmailMessageSummary;
-import com.jiosi.inbox.gmail.dto.GmailMessagesPageResponse;
-import com.jiosi.inbox.gmail.dto.GmailStatusResponse;
+import com.jiosi.inbox.email.Email;
+import com.jiosi.inbox.email.EmailRepository;
+import com.jiosi.inbox.email.EmailThread;
+import com.jiosi.inbox.email.EmailThreadRepository;
+import com.jiosi.inbox.gmail.dto.*;
 import com.jiosi.inbox.security.TokenEncryptionService;
+import com.jiosi.inbox.workspace.Workspace;
+import com.jiosi.inbox.workspace.WorkspaceRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,22 +33,42 @@ public class GmailService {
     private final ConnectedAccountRepository connectedAccountRepository;
     private final TokenEncryptionService tokenEncryptionService;
     private final GmailClient gmailApiClient;
+    private final EmailThreadRepository threadRepository;
+    private final EmailRepository emailRepository;
+    private final WorkspaceRepository workspaceRepository;
 
     private final String clientId;
     private final String clientSecret;
 
+    @Autowired
     public GmailService(
             ConnectedAccountRepository connectedAccountRepository,
             TokenEncryptionService tokenEncryptionService,
             GmailClient gmailApiClient,
+            EmailThreadRepository threadRepository,
+            EmailRepository emailRepository,
+            WorkspaceRepository workspaceRepository,
             @Value("${spring.security.oauth2.client.registration.google.client-id:${GOOGLE_CLIENT_ID:}}") String clientId,
             @Value("${spring.security.oauth2.client.registration.google.client-secret:${GOOGLE_CLIENT_SECRET:}}") String clientSecret
     ) {
         this.connectedAccountRepository = connectedAccountRepository;
         this.tokenEncryptionService = tokenEncryptionService;
         this.gmailApiClient = gmailApiClient;
+        this.threadRepository = threadRepository;
+        this.emailRepository = emailRepository;
+        this.workspaceRepository = workspaceRepository;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+    }
+
+    public GmailService(
+            ConnectedAccountRepository connectedAccountRepository,
+            TokenEncryptionService tokenEncryptionService,
+            GmailClient gmailApiClient,
+            String clientId,
+            String clientSecret
+    ) {
+        this(connectedAccountRepository, tokenEncryptionService, gmailApiClient, null, null, null, clientId, clientSecret);
     }
 
     @Transactional(readOnly = true)
@@ -141,6 +166,191 @@ public class GmailService {
 
         JsonNode detailNode = gmailApiClient.getMessage(accessToken, messageId);
         return parseMessageDetail(detailNode);
+    }
+
+    @Transactional
+    public GmailSyncResponse syncInboxMessages(UUID userId, UUID workspaceId, int maxResults) {
+        return syncInboxMessages(userId, workspaceId, maxResults, null);
+    }
+
+    @Transactional
+    public GmailSyncResponse syncInboxMessages(UUID userId, UUID workspaceId, int maxResults, String pageToken) {
+        if (workspaceId == null) {
+            throw new IllegalArgumentException("Workspace ID is required for Gmail mailbox synchronization");
+        }
+
+        Workspace workspace = (workspaceRepository != null)
+                ? workspaceRepository.findById(workspaceId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Workspace not found: " + workspaceId))
+                : null;
+
+        ConnectedAccount account = findConnectedAccount(userId, workspaceId);
+        if (account.getWorkspace() == null && workspace != null) {
+            account.setWorkspace(workspace);
+        }
+
+        String accessToken = getValidAccessToken(account);
+
+        int fetchLimit = Math.max(1, Math.min(maxResults > 0 ? maxResults : 25, 100));
+        JsonNode listResponse = gmailApiClient.listMessages(accessToken, fetchLimit, pageToken, "in:inbox");
+
+        int syncedCount = 0;
+        int newMessagesCount = 0;
+        int existingMessagesCount = 0;
+        int failedMessagesCount = 0;
+
+        JsonNode messagesNode = listResponse.path("messages");
+        if (messagesNode.isArray()) {
+            for (JsonNode item : messagesNode) {
+                String messageId = item.path("id").asText();
+                if (messageId == null || messageId.isBlank()) {
+                    continue;
+                }
+
+                if (emailRepository != null && emailRepository.existsByAccountIdAndExternalMessageId(account.getId(), messageId)) {
+                    existingMessagesCount++;
+                    continue;
+                }
+
+                try {
+                    JsonNode detailNode = gmailApiClient.getMessage(accessToken, messageId);
+                    GmailMessageDetail detail = parseMessageDetail(detailNode);
+
+                    if (workspace != null && threadRepository != null && emailRepository != null) {
+                        try {
+                            persistGmailMessage(workspace, account, detail);
+                            newMessagesCount++;
+                            syncedCount++;
+                        } catch (DataIntegrityViolationException dive) {
+                            log.debug("Concurrent duplicate message ignored: {}", messageId);
+                            existingMessagesCount++;
+                        }
+                    } else {
+                        newMessagesCount++;
+                        syncedCount++;
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to import Gmail message {} during sync: {}", messageId, e.getMessage());
+                    failedMessagesCount++;
+                }
+            }
+        }
+
+        String nextPageToken = listResponse.path("nextPageToken").asText(null);
+        int resultSizeEstimate = listResponse.path("resultSizeEstimate").asInt(syncedCount + existingMessagesCount);
+
+        account.setLastSyncAt(Instant.now());
+        connectedAccountRepository.save(account);
+
+        log.info("Gmail sync completed for user {} in workspace {}: {} new, {} existing, {} failed",
+                userId, workspaceId, newMessagesCount, existingMessagesCount, failedMessagesCount);
+
+        return new GmailSyncResponse(
+                syncedCount,
+                newMessagesCount,
+                existingMessagesCount,
+                failedMessagesCount,
+                nextPageToken,
+                resultSizeEstimate
+        );
+    }
+
+    private void persistGmailMessage(Workspace workspace, ConnectedAccount account, GmailMessageDetail detail) {
+        String extThreadId = (detail.threadId() != null && !detail.threadId().isBlank())
+                ? detail.threadId()
+                : detail.id();
+
+        Optional<EmailThread> threadOpt = threadRepository.findByAccountIdAndExternalThreadId(account.getId(), extThreadId);
+        if (threadOpt.isEmpty()) {
+            threadOpt = threadRepository.findByWorkspaceIdAndExternalThreadId(workspace.getId(), extThreadId);
+        }
+
+        EmailThread thread;
+        if (threadOpt.isPresent()) {
+            thread = threadOpt.get();
+            thread.setMessageCount(thread.getMessageCount() + 1);
+            if (detail.receivedAt() != null && (thread.getLastMessageAt() == null || detail.receivedAt().isAfter(thread.getLastMessageAt()))) {
+                thread.setLastMessageAt(detail.receivedAt());
+                thread.setSnippet(truncate(detail.snippet(), 1000));
+                thread.setSubject(truncate(detail.subject() != null && !detail.subject().isBlank() ? detail.subject() : "(No Subject)", 500));
+                thread.setSenderName(truncate(detail.senderName() != null && !detail.senderName().isBlank() ? detail.senderName() : "Unknown", 150));
+                thread.setSenderEmail(truncate(detail.senderEmail() != null && !detail.senderEmail().isBlank() ? detail.senderEmail() : account.getEmailAddress(), 255));
+            }
+            if (detail.isUnread()) {
+                thread.setUnread(true);
+            }
+            if (detail.isStarred()) {
+                thread.setStarred(true);
+            }
+            thread = threadRepository.save(thread);
+        } else {
+            thread = new EmailThread();
+            thread.setWorkspace(workspace);
+            thread.setAccount(account);
+            thread.setExternalThreadId(extThreadId);
+            thread.setSubject(truncate(detail.subject() != null && !detail.subject().isBlank() ? detail.subject() : "(No Subject)", 500));
+            thread.setSnippet(truncate(detail.snippet() != null ? detail.snippet() : "", 1000));
+            thread.setSenderName(truncate(detail.senderName() != null && !detail.senderName().isBlank() ? detail.senderName() : "Unknown", 150));
+            thread.setSenderEmail(truncate(detail.senderEmail() != null && !detail.senderEmail().isBlank() ? detail.senderEmail() : account.getEmailAddress(), 255));
+            thread.setSenderAvatar(extractInitials(thread.getSenderName()));
+            thread.setRecipientEmail(truncate(detail.recipientEmail() != null && !detail.recipientEmail().isBlank() ? detail.recipientEmail() : account.getEmailAddress(), 255));
+            thread.setRecipientName(truncate(extractNameFromEmail(thread.getRecipientEmail()), 150));
+            thread.setUnread(detail.isUnread());
+            thread.setStarred(detail.isStarred());
+            thread.setNeedsReply(detail.isUnread());
+            thread.setArchived(false);
+            thread.setSent(false);
+            thread.setDraft(false);
+            thread.setSnoozed(false);
+            thread.setLastMessageAt(detail.receivedAt() != null ? detail.receivedAt() : Instant.now());
+            thread.setMessageCount(1);
+            if (detail.labelIds() != null) {
+                for (String lbl : detail.labelIds()) {
+                    if (lbl != null && !lbl.isBlank() && lbl.length() <= 64) {
+                        thread.getTags().add(lbl);
+                    }
+                }
+            }
+            thread = threadRepository.save(thread);
+        }
+
+        Email email = new Email();
+        email.setWorkspace(workspace);
+        email.setThread(thread);
+        email.setAccount(account);
+        email.setExternalMessageId(detail.id());
+        email.setSenderName(truncate(detail.senderName() != null && !detail.senderName().isBlank() ? detail.senderName() : "Unknown", 150));
+        email.setSenderEmail(truncate(detail.senderEmail() != null && !detail.senderEmail().isBlank() ? detail.senderEmail() : account.getEmailAddress(), 255));
+        email.setSenderAvatar(extractInitials(email.getSenderName()));
+        email.setRecipientEmail(truncate(detail.recipientEmail() != null && !detail.recipientEmail().isBlank() ? detail.recipientEmail() : account.getEmailAddress(), 255));
+        email.setRecipientName(truncate(extractNameFromEmail(email.getRecipientEmail()), 150));
+        email.setCc(detail.cc());
+        email.setSubject(truncate(detail.subject() != null && !detail.subject().isBlank() ? detail.subject() : "(No Subject)", 500));
+        email.setSnippet(truncate(detail.snippet() != null ? detail.snippet() : "", 1000));
+        String body = (detail.bodyText() != null && !detail.bodyText().isBlank())
+                ? detail.bodyText()
+                : (detail.snippet() != null ? detail.snippet() : "");
+        email.setBodyText(body);
+        email.setBodyHtml(detail.bodyHtml());
+        email.setSentAt(detail.receivedAt() != null ? detail.receivedAt() : Instant.now());
+        emailRepository.save(email);
+    }
+
+    private String truncate(String text, int maxLength) {
+        if (text == null) return "";
+        return text.length() <= maxLength ? text : text.substring(0, maxLength);
+    }
+
+    private String extractInitials(String name) {
+        if (name == null || name.isBlank()) return "U";
+        String[] parts = name.trim().split("\\s+");
+        if (parts.length == 1) return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase(Locale.ROOT);
+        return ("" + parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase(Locale.ROOT);
+    }
+
+    private String extractNameFromEmail(String email) {
+        if (email == null || !email.contains("@")) return email != null ? email : "";
+        return email.split("@")[0];
     }
 
     private ConnectedAccount findConnectedAccount(UUID userId, UUID workspaceId) {

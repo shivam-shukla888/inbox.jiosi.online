@@ -15,4 +15,6 @@ public interface EmailRepository extends JpaRepository<Email, UUID> {
     Optional<Email> findByWorkspaceIdAndId(UUID workspaceId, UUID id);
 
     boolean existsByAccountIdAndExternalMessageId(UUID accountId, String externalMessageId);
+
+    Optional<Email> findByAccountIdAndExternalMessageId(UUID accountId, String externalMessageId);
 }

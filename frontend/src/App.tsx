@@ -75,6 +75,7 @@ export const App: React.FC = () => {
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthSessionData | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [shouldInitialSync, setShouldInitialSync] = useState(false);
 
   // Toast feedback state
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -128,8 +129,9 @@ export const App: React.FC = () => {
         setAuthState('AUTHENTICATION_ERROR');
         window.history.replaceState({}, document.title, window.location.pathname);
       } else if (params.get('gmail_connected')) {
-        showToast('Gmail account connected successfully! Read-only sync active.', 'success');
+        showToast('Gmail account connected successfully! Starting initial sync...', 'info');
         window.history.replaceState({}, document.title, window.location.pathname);
+        setShouldInitialSync(true);
       }
     }
 
@@ -192,6 +194,23 @@ export const App: React.FC = () => {
       loadThreads(currentFolder, currentFilter);
     }
   }, [currentFolder, currentFilter, currentUser, isDemoMode, loadThreads]);
+
+  // One-time initial mailbox sync after OAuth redirect
+  useEffect(() => {
+    if (shouldInitialSync && currentUser) {
+      setShouldInitialSync(false);
+      apiClient.syncGmail(25)
+        .then((syncRes) => {
+          const count = syncRes?.newMessagesCount ?? 0;
+          showToast(`Initial sync complete! Imported ${count} messages.`, 'success');
+          loadThreads(currentFolder, currentFilter);
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : 'Initial sync failed';
+          showToast(`Initial Gmail sync: ${msg}`, 'error');
+        });
+    }
+  }, [shouldInitialSync, currentUser, loadThreads, currentFolder, currentFilter, showToast]);
 
   // Fetch detailed email when selectedEmailId changes
   useEffect(() => {
@@ -822,6 +841,7 @@ export const App: React.FC = () => {
               onToggleTheme={toggleTheme}
               onNotify={showToast}
               user={currentUser}
+              onSyncSuccess={() => loadThreads(currentFolder, currentFilter)}
             />
           ) : currentView === 'privacy' ? (
             <PrivacyView onBack={() => setCurrentView('mail')} />

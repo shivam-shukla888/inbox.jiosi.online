@@ -2,15 +2,21 @@ package com.jiosi.inbox.gmail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jiosi.inbox.common.ApiResponse;
 import com.jiosi.inbox.common.ResourceNotFoundException;
 import com.jiosi.inbox.common.UnauthorizedException;
+import com.jiosi.inbox.common.WorkspaceAccessDeniedException;
 import com.jiosi.inbox.config.CustomOAuth2AuthorizationRequestResolver;
 import com.jiosi.inbox.connectedaccount.ConnectedAccount;
 import com.jiosi.inbox.connectedaccount.ConnectedAccountRepository;
-import com.jiosi.inbox.gmail.dto.GmailMessageDetail;
-import com.jiosi.inbox.gmail.dto.GmailMessagesPageResponse;
-import com.jiosi.inbox.gmail.dto.GmailStatusResponse;
+import com.jiosi.inbox.email.Email;
+import com.jiosi.inbox.email.EmailRepository;
+import com.jiosi.inbox.email.EmailThread;
+import com.jiosi.inbox.email.EmailThreadRepository;
+import com.jiosi.inbox.gmail.dto.*;
 import com.jiosi.inbox.security.TokenEncryptionService;
+import com.jiosi.inbox.security.UserContext;
+import com.jiosi.inbox.security.WorkspaceAuthorizationService;
 import com.jiosi.inbox.user.User;
 import com.jiosi.inbox.user.UserRepository;
 import com.jiosi.inbox.workspace.Workspace;
@@ -20,8 +26,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -449,6 +457,333 @@ class GmailIntegrationTests {
             assertThatThrownBy(() -> gmailService.disconnect(userAId, null))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("No connected Gmail account found for user");
+        }
+    }
+
+    // =========================================================================
+    // 5. GMAIL SYNCHRONIZATION & ENTITY PERSISTENCE TESTS
+    // =========================================================================
+    @Nested
+    @DisplayName("Gmail Synchronization & Entity Persistence Tests")
+    class GmailMailboxSynchronizationTests {
+
+        @Mock
+        private ConnectedAccountRepository connectedAccountRepository;
+        @Mock
+        private GmailClient gmailApiClient;
+        @Mock
+        private EmailThreadRepository threadRepository;
+        @Mock
+        private EmailRepository emailRepository;
+        @Mock
+        private WorkspaceRepository workspaceRepository;
+
+        private WorkspaceAuthorizationService workspaceAuthorizationService;
+        private boolean accessDeniedTriggered;
+        private boolean validatedAccessCalled;
+
+        private TokenEncryptionService tokenEncryptionService;
+        private GmailService gmailService;
+        private GmailController gmailController;
+
+        private final UUID testUserId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        private final UUID testWorkspaceId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+        private User testUser;
+        private Workspace testWorkspace;
+        private ConnectedAccount testAccount;
+
+        @BeforeEach
+        void setUp() {
+            tokenEncryptionService = new TokenEncryptionService("test_secret_key_minimum_32_bytes_length_for_aes_gcm");
+            gmailService = new GmailService(
+                    connectedAccountRepository,
+                    tokenEncryptionService,
+                    gmailApiClient,
+                    threadRepository,
+                    emailRepository,
+                    workspaceRepository,
+                    "test-google-client-id",
+                    "test-google-client-secret"
+            );
+
+            accessDeniedTriggered = false;
+            validatedAccessCalled = false;
+            workspaceAuthorizationService = new WorkspaceAuthorizationService(null, null) {
+                @Override
+                public WorkspaceAuthorizationService.WorkspaceMemberAccess validateAccess(UUID workspaceId, User user) {
+                    validatedAccessCalled = true;
+                    if (accessDeniedTriggered) {
+                        throw new WorkspaceAccessDeniedException("Workspace access denied");
+                    }
+                    return null;
+                }
+            };
+
+            gmailController = new GmailController(
+                    gmailService,
+                    workspaceAuthorizationService,
+                    "https://inbox.jiosi.online",
+                    "https://jiosi-inbox-api.onrender.com"
+            );
+
+            testUser = new User("user@jiosi.online", "Test User", null);
+            testUser.setId(testUserId);
+            testWorkspace = new Workspace("Primary Workspace", "primary-workspace", testUser);
+            testWorkspace.setId(testWorkspaceId);
+
+            testAccount = new ConnectedAccount(testUser, "gmail", "user@jiosi.online", "CONNECTED");
+            testAccount.setId(UUID.fromString("33333333-3333-3333-3333-333333333333"));
+            testAccount.setWorkspace(testWorkspace);
+            testAccount.setAccessTokenEncrypted(tokenEncryptionService.encrypt("valid_access_token"));
+            testAccount.setRefreshTokenEncrypted(tokenEncryptionService.encrypt("valid_refresh_token"));
+            testAccount.setTokenExpiresAt(Instant.now().plusSeconds(3600));
+
+            UserContext.set(testUser, "OWNER");
+        }
+
+        @org.junit.jupiter.api.AfterEach
+        void tearDown() {
+            UserContext.clear();
+        }
+
+        @Test
+        @DisplayName("Synchronizes new Gmail messages, persists EmailThread and Email entities, and updates metadata")
+        void shouldSynchronizeAndPersistNewGmailMessages() throws Exception {
+            when(workspaceRepository.findById(testWorkspaceId)).thenReturn(Optional.of(testWorkspace));
+            when(connectedAccountRepository.findFirstByUserIdAndWorkspaceIdAndProvider(testUserId, testWorkspaceId, "gmail"))
+                    .thenReturn(Optional.of(testAccount));
+
+            String listJson = "{\"messages\": [{\"id\": \"msg-101\", \"threadId\": \"th-101\"}], \"nextPageToken\": \"next-page-tok\", \"resultSizeEstimate\": 1}";
+            when(gmailApiClient.listMessages("valid_access_token", 25, null, "in:inbox"))
+                    .thenReturn(objectMapper.readTree(listJson));
+
+            when(emailRepository.existsByAccountIdAndExternalMessageId(testAccount.getId(), "msg-101"))
+                    .thenReturn(false);
+
+            String detailJson = "{" +
+                    "\"id\": \"msg-101\"," +
+                    "\"threadId\": \"th-101\"," +
+                    "\"snippet\": \"Alex, attached is the revised term sheet...\"," +
+                    "\"internalDate\": \"1700000000000\"," +
+                    "\"labelIds\": [\"UNREAD\", \"INBOX\", \"STARRED\"]," +
+                    "\"payload\": {" +
+                    "  \"headers\": [" +
+                    "    {\"name\": \"Subject\", \"value\": \"Q3 Seed Extension Term Sheet\"}," +
+                    "    {\"name\": \"From\", \"value\": \"Sarah Jenkins <sarah@kinto.ventures>\"}," +
+                    "    {\"name\": \"To\", \"value\": \"alex@jiosi.online\"}" +
+                    "  ]" +
+                    "}" +
+                    "}";
+            when(gmailApiClient.getMessage("valid_access_token", "msg-101"))
+                    .thenReturn(objectMapper.readTree(detailJson));
+
+            when(threadRepository.findByAccountIdAndExternalThreadId(testAccount.getId(), "th-101"))
+                    .thenReturn(Optional.empty());
+            when(threadRepository.findByWorkspaceIdAndExternalThreadId(testWorkspace.getId(), "th-101"))
+                    .thenReturn(Optional.empty());
+
+            when(threadRepository.save(any(EmailThread.class))).thenAnswer(inv -> {
+                EmailThread t = inv.getArgument(0);
+                t.setId(UUID.randomUUID());
+                return t;
+            });
+
+            GmailSyncResponse response = gmailService.syncInboxMessages(testUserId, testWorkspaceId, 25);
+
+            assertThat(response).isNotNull();
+            assertThat(response.syncedCount()).isEqualTo(1);
+            assertThat(response.newMessagesCount()).isEqualTo(1);
+            assertThat(response.existingMessagesCount()).isEqualTo(0);
+            assertThat(response.failedMessagesCount()).isEqualTo(0);
+            assertThat(response.nextPageToken()).isEqualTo("next-page-tok");
+
+            ArgumentCaptor<EmailThread> threadCaptor = ArgumentCaptor.forClass(EmailThread.class);
+            verify(threadRepository, atLeastOnce()).save(threadCaptor.capture());
+            EmailThread savedThread = threadCaptor.getValue();
+            assertThat(savedThread.getSubject()).isEqualTo("Q3 Seed Extension Term Sheet");
+            assertThat(savedThread.getSenderEmail()).isEqualTo("sarah@kinto.ventures");
+            assertThat(savedThread.getExternalThreadId()).isEqualTo("th-101");
+            assertThat(savedThread.isUnread()).isTrue();
+            assertThat(savedThread.isStarred()).isTrue();
+
+            ArgumentCaptor<Email> emailCaptor = ArgumentCaptor.forClass(Email.class);
+            verify(emailRepository).save(emailCaptor.capture());
+            Email savedEmail = emailCaptor.getValue();
+            assertThat(savedEmail.getExternalMessageId()).isEqualTo("msg-101");
+            assertThat(savedEmail.getSenderName()).isEqualTo("Sarah Jenkins");
+            assertThat(savedEmail.getSenderEmail()).isEqualTo("sarah@kinto.ventures");
+            assertThat(savedEmail.getBodyText()).contains("Alex, attached is the revised term sheet");
+
+            verify(connectedAccountRepository).save(testAccount);
+            assertThat(testAccount.getLastSyncAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Enforces idempotency: does not duplicate already-imported messages")
+        void shouldEnforceIdempotencyAndSkipExistingMessages() throws Exception {
+            when(workspaceRepository.findById(testWorkspaceId)).thenReturn(Optional.of(testWorkspace));
+            when(connectedAccountRepository.findFirstByUserIdAndWorkspaceIdAndProvider(testUserId, testWorkspaceId, "gmail"))
+                    .thenReturn(Optional.of(testAccount));
+
+            String listJson = "{\"messages\": [{\"id\": \"msg-duplicate\", \"threadId\": \"th-duplicate\"}], \"resultSizeEstimate\": 1}";
+            when(gmailApiClient.listMessages("valid_access_token", 25, null, "in:inbox"))
+                    .thenReturn(objectMapper.readTree(listJson));
+
+            // Message already persisted in database
+            when(emailRepository.existsByAccountIdAndExternalMessageId(testAccount.getId(), "msg-duplicate"))
+                    .thenReturn(true);
+
+            GmailSyncResponse response = gmailService.syncInboxMessages(testUserId, testWorkspaceId, 25);
+
+            assertThat(response.syncedCount()).isEqualTo(0);
+            assertThat(response.newMessagesCount()).isEqualTo(0);
+            assertThat(response.existingMessagesCount()).isEqualTo(1);
+            assertThat(response.failedMessagesCount()).isEqualTo(0);
+
+            // Verified: detail fetch and save are bypassed for duplicate
+            verify(gmailApiClient, never()).getMessage(anyString(), anyString());
+            verify(emailRepository, never()).save(any(Email.class));
+        }
+
+        @Test
+        @DisplayName("Updates existing thread metadata and message count when a new reply arrives in thread")
+        void shouldUpdateExistingThreadWhenNewReplyArrives() throws Exception {
+            when(workspaceRepository.findById(testWorkspaceId)).thenReturn(Optional.of(testWorkspace));
+            when(connectedAccountRepository.findFirstByUserIdAndWorkspaceIdAndProvider(testUserId, testWorkspaceId, "gmail"))
+                    .thenReturn(Optional.of(testAccount));
+
+            String listJson = "{\"messages\": [{\"id\": \"msg-reply-2\", \"threadId\": \"th-existing\"}]}";
+            when(gmailApiClient.listMessages("valid_access_token", 25, null, "in:inbox"))
+                    .thenReturn(objectMapper.readTree(listJson));
+
+            when(emailRepository.existsByAccountIdAndExternalMessageId(testAccount.getId(), "msg-reply-2"))
+                    .thenReturn(false);
+
+            String detailJson = "{" +
+                    "\"id\": \"msg-reply-2\"," +
+                    "\"threadId\": \"th-existing\"," +
+                    "\"snippet\": \"Latest reply to thread\"," +
+                    "\"internalDate\": \"1700050000000\"," +
+                    "\"labelIds\": [\"UNREAD\", \"INBOX\"]," +
+                    "\"payload\": {" +
+                    "  \"headers\": [" +
+                    "    {\"name\": \"Subject\", \"value\": \"Re: Q3 Extension\"}," +
+                    "    {\"name\": \"From\", \"value\": \"Elena Rostova <elena@partner.com>\"}," +
+                    "    {\"name\": \"To\", \"value\": \"user@jiosi.online\"}" +
+                    "  ]" +
+                    "}" +
+                    "}";
+            when(gmailApiClient.getMessage("valid_access_token", "msg-reply-2"))
+                    .thenReturn(objectMapper.readTree(detailJson));
+
+            EmailThread existingThread = new EmailThread();
+            existingThread.setId(UUID.randomUUID());
+            existingThread.setWorkspace(testWorkspace);
+            existingThread.setAccount(testAccount);
+            existingThread.setExternalThreadId("th-existing");
+            existingThread.setMessageCount(1);
+            existingThread.setLastMessageAt(Instant.ofEpochMilli(1700000000000L));
+
+            when(threadRepository.findByAccountIdAndExternalThreadId(testAccount.getId(), "th-existing"))
+                    .thenReturn(Optional.of(existingThread));
+            when(threadRepository.save(existingThread)).thenReturn(existingThread);
+
+            GmailSyncResponse response = gmailService.syncInboxMessages(testUserId, testWorkspaceId, 25);
+
+            assertThat(response.newMessagesCount()).isEqualTo(1);
+            assertThat(existingThread.getMessageCount()).isEqualTo(2);
+            assertThat(existingThread.getLastMessageAt()).isEqualTo(Instant.ofEpochMilli(1700050000000L));
+            assertThat(existingThread.isUnread()).isTrue();
+            verify(emailRepository).save(any(Email.class));
+        }
+
+        @Test
+        @DisplayName("Handles empty Gmail inbox without failure")
+        void shouldHandleEmptyGmailInboxCleanly() throws Exception {
+            when(workspaceRepository.findById(testWorkspaceId)).thenReturn(Optional.of(testWorkspace));
+            when(connectedAccountRepository.findFirstByUserIdAndWorkspaceIdAndProvider(testUserId, testWorkspaceId, "gmail"))
+                    .thenReturn(Optional.of(testAccount));
+
+            when(gmailApiClient.listMessages("valid_access_token", 25, null, "in:inbox"))
+                    .thenReturn(objectMapper.readTree("{\"messages\": [], \"resultSizeEstimate\": 0}"));
+
+            GmailSyncResponse response = gmailService.syncInboxMessages(testUserId, testWorkspaceId, 25);
+
+            assertThat(response.syncedCount()).isEqualTo(0);
+            assertThat(response.newMessagesCount()).isEqualTo(0);
+            assertThat(response.existingMessagesCount()).isEqualTo(0);
+            assertThat(response.failedMessagesCount()).isEqualTo(0);
+
+            verify(emailRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Handles individual message fetch failures gracefully and reports failed count")
+        void shouldHandlePartialFetchFailureGracefully() throws Exception {
+            when(workspaceRepository.findById(testWorkspaceId)).thenReturn(Optional.of(testWorkspace));
+            when(connectedAccountRepository.findFirstByUserIdAndWorkspaceIdAndProvider(testUserId, testWorkspaceId, "gmail"))
+                    .thenReturn(Optional.of(testAccount));
+
+            String listJson = "{\"messages\": [{\"id\": \"msg-ok\", \"threadId\": \"th-ok\"}, {\"id\": \"msg-broken\", \"threadId\": \"th-broken\"}]}";
+            when(gmailApiClient.listMessages("valid_access_token", 25, null, "in:inbox"))
+                    .thenReturn(objectMapper.readTree(listJson));
+
+            when(emailRepository.existsByAccountIdAndExternalMessageId(testAccount.getId(), "msg-ok"))
+                    .thenReturn(false);
+            when(emailRepository.existsByAccountIdAndExternalMessageId(testAccount.getId(), "msg-broken"))
+                    .thenReturn(false);
+
+            String detailJson = "{\"id\": \"msg-ok\", \"threadId\": \"th-ok\", \"snippet\": \"ok\", \"payload\": {}}";
+            when(gmailApiClient.getMessage("valid_access_token", "msg-ok"))
+                    .thenReturn(objectMapper.readTree(detailJson));
+            when(gmailApiClient.getMessage("valid_access_token", "msg-broken"))
+                    .thenThrow(new GmailApiException("Transient rate limit error", 429));
+
+            when(threadRepository.save(any(EmailThread.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            GmailSyncResponse response = gmailService.syncInboxMessages(testUserId, testWorkspaceId, 25);
+
+            assertThat(response.syncedCount()).isEqualTo(1);
+            assertThat(response.newMessagesCount()).isEqualTo(1);
+            assertThat(response.failedMessagesCount()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("POST /api/v1/gmail/sync validates workspace and executes authorized sync")
+        void shouldExecuteAuthorizedSyncViaController() throws Exception {
+            when(workspaceRepository.findById(testWorkspaceId)).thenReturn(Optional.of(testWorkspace));
+            when(connectedAccountRepository.findFirstByUserIdAndWorkspaceIdAndProvider(testUserId, testWorkspaceId, "gmail"))
+                    .thenReturn(Optional.of(testAccount));
+
+            when(gmailApiClient.listMessages("valid_access_token", 10, "test-page-token", "in:inbox"))
+                    .thenReturn(objectMapper.readTree("{\"messages\": []}"));
+
+            GmailSyncRequest request = new GmailSyncRequest(10, "test-page-token");
+            ResponseEntity<ApiResponse<GmailSyncResponse>> responseEntity = gmailController.sync(testWorkspaceId, request);
+
+            assertThat(responseEntity.getStatusCode().is2xxSuccessful()).isTrue();
+            assertThat(responseEntity.getBody()).isNotNull();
+            assertThat(responseEntity.getBody().success()).isTrue();
+
+            assertThat(validatedAccessCalled).isTrue();
+        }
+
+        @Test
+        @DisplayName("POST /api/v1/gmail/sync rejects requests when workspace authorization fails")
+        void shouldRejectWhenWorkspaceAccessDenied() {
+            accessDeniedTriggered = true;
+            assertThatThrownBy(() -> gmailController.sync(testWorkspaceId, new GmailSyncRequest(25, null)))
+                    .isInstanceOf(WorkspaceAccessDeniedException.class)
+                    .hasMessageContaining("Workspace access denied");
+        }
+
+        @Test
+        @DisplayName("POST /api/v1/gmail/sync rejects requests missing X-Workspace-Id header")
+        void shouldRejectSyncMissingWorkspaceId() {
+            ResponseEntity<ApiResponse<GmailSyncResponse>> responseEntity = gmailController.sync(null, new GmailSyncRequest(25, null));
+
+            assertThat(responseEntity.getStatusCode().value()).isEqualTo(400);
+            assertThat(responseEntity.getBody().message()).contains("Workspace ID is required");
         }
     }
 }

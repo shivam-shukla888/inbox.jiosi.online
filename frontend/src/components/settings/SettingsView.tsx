@@ -25,6 +25,7 @@ interface SettingsViewProps {
   onToggleTheme: () => void;
   onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
   user?: AuthSessionData | null;
+  onSyncSuccess?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -34,6 +35,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onToggleTheme,
   onNotify,
   user,
+  onSyncSuccess,
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
@@ -212,7 +214,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               </div>
 
-              <ConnectedAccountsView onNotify={onNotify} user={user} />
+              <ConnectedAccountsView onNotify={onNotify} user={user} onSyncSuccess={onSyncSuccess} />
             </div>
           )}
 

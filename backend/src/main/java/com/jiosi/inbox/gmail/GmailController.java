@@ -6,6 +6,8 @@ import com.jiosi.inbox.config.CustomOAuth2AuthorizationRequestResolver;
 import com.jiosi.inbox.gmail.dto.GmailMessageDetail;
 import com.jiosi.inbox.gmail.dto.GmailMessagesPageResponse;
 import com.jiosi.inbox.gmail.dto.GmailStatusResponse;
+import com.jiosi.inbox.gmail.dto.GmailSyncRequest;
+import com.jiosi.inbox.gmail.dto.GmailSyncResponse;
 import com.jiosi.inbox.security.UserContext;
 import com.jiosi.inbox.security.WorkspaceAuthorizationService;
 import com.jiosi.inbox.user.User;
@@ -92,6 +94,29 @@ public class GmailController {
                 Map.of("success", true, "status", "DISCONNECTED"),
                 "Gmail account disconnected successfully"
         ));
+    }
+
+    @PostMapping("/sync")
+    public ResponseEntity<ApiResponse<GmailSyncResponse>> sync(
+            @RequestHeader(value = "X-Workspace-Id", required = false) UUID workspaceId,
+            @RequestBody(required = false) GmailSyncRequest request
+    ) {
+        User user = resolveCurrentUser();
+        if (workspaceId == null) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Workspace ID is required to synchronize Gmail inbox"));
+        }
+
+        if (workspaceAuthorizationService != null) {
+            workspaceAuthorizationService.validateAccess(workspaceId, user);
+        }
+
+        int maxResults = (request != null && request.maxResults() != null) ? request.maxResults() : 25;
+        String pageToken = (request != null) ? request.pageToken() : null;
+
+        GmailSyncResponse response = gmailService.syncInboxMessages(
+                user.getId(), workspaceId, maxResults, pageToken
+        );
+        return ResponseEntity.ok(ApiResponse.ok(response, "Gmail inbox synchronized successfully"));
     }
 
     @GetMapping("/messages")

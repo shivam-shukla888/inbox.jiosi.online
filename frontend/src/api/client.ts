@@ -53,6 +53,15 @@ export interface AuthSessionData {
   role: string;
 }
 
+export interface GmailSyncResponse {
+  syncedCount: number;
+  newMessagesCount: number;
+  existingMessagesCount: number;
+  failedMessagesCount: number;
+  nextPageToken?: string | null;
+  resultSizeEstimate: number;
+}
+
 function getXsrfToken(): string | null {
   if (typeof document === 'undefined') return null;
   const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
@@ -493,6 +502,16 @@ export class ApiClient {
       credentials: 'include',
     });
     return this.handleResponse<GmailMessageDetail>(res);
+  }
+
+  async syncGmail(maxResults: number = 25, pageToken?: string): Promise<GmailSyncResponse> {
+    const res = await fetch(`${this.baseUrl}/api/v1/gmail/sync`, {
+      method: 'POST',
+      headers: this.getHeaders(true, true),
+      credentials: 'include',
+      body: JSON.stringify({ maxResults, pageToken }),
+    });
+    return this.handleResponse<GmailSyncResponse>(res);
   }
 }
 
