@@ -45,3 +45,4 @@ tmp/
 # Docker volumes
 .docker-data/
 postgres-data/
+.neon

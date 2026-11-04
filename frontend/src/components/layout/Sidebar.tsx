@@ -1,5 +1,6 @@
 import React from 'react';
 import { EmailFolder } from '../../types/email';
+import { AuthSessionData } from '../../api/client';
 import { Button } from '../ui/Button';
 import { HealthBadge } from '../ui/HealthBadge';
 import {
@@ -23,6 +24,8 @@ interface SidebarProps {
   folderCounts: Record<EmailFolder, { total: number; unread?: number }>;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
+  user?: AuthSessionData | null;
+  isDemoMode?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -33,6 +36,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   folderCounts,
   isOpenMobile = false,
   onCloseMobile,
+  user,
+  isDemoMode = false,
 }) => {
   const navItems: {
     id: EmailFolder;
@@ -130,13 +135,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-left">
             <div className="flex items-center gap-2.5 overflow-hidden">
               <div className="w-5 h-5 rounded-full bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300 flex items-center justify-center font-mono text-[10px] font-semibold shrink-0">
-                A
+                {(isDemoMode ? 'S' : user?.fullName?.[0] || user?.email?.[0] || 'U').toUpperCase()}
               </div>
               <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
-                alex@jiosi.online
+                {isDemoMode ? 'demo@simulation.preview' : user?.email || 'Authenticated User'}
               </span>
             </div>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Connected" />
+            <span
+              className={`w-2 h-2 rounded-full ${isDemoMode ? 'bg-amber-400' : 'bg-emerald-500'} shrink-0`}
+              title={isDemoMode ? 'Simulation Sandbox' : 'Connected'}
+            />
           </div>
 
           {/* High-Contrast Compose Action with Purple Brand Style */}

@@ -1,0 +1,13 @@
+backend/target/
+frontend/dist/
+frontend/node_modules/
+node_modules/
+.git/
+.gitignore
+*.env
+*.env.*
+.idea/
+*.iml
+.vscode/
+.DS_Store
+

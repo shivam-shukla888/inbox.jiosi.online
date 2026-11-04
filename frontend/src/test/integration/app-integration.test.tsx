@@ -34,7 +34,7 @@ describe('JIOSI Inbox Application Integration Tests', () => {
     vi.restoreAllMocks();
 
     // Default mock setup: authenticated & server returns DEMO_EMAILS
-    vi.spyOn(apiClient, 'initAuth').mockResolvedValue({
+    const mockUser = {
       token: 'mock-token',
       userId: 'mock-user-1',
       email: 'alex@jiosi.online',
@@ -43,27 +43,35 @@ describe('JIOSI Inbox Application Integration Tests', () => {
       defaultWorkspaceId: 'a0000000-0000-0000-0000-000000000001',
       defaultWorkspaceName: 'Primary Workspace',
       role: 'OWNER',
-    });
+    };
+    vi.spyOn(apiClient, 'getMe').mockResolvedValue(mockUser);
+    vi.spyOn(apiClient, 'initAuth').mockResolvedValue(mockUser);
+    vi.spyOn(apiClient, 'fetchCsrf').mockResolvedValue(undefined);
     vi.spyOn(apiClient, 'fetchThreads').mockResolvedValue(createMockPagedData(DEMO_EMAILS));
+    vi.spyOn(apiClient, 'getGmailStatus').mockResolvedValue({
+      success: true,
+      message: 'OK',
+      data: { connected: false, provider: 'GOOGLE_GMAIL', status: 'NOT_CONNECTED' },
+    });
   });
 
   it('renders the complete 3-panel workspace on initial load with real data', async () => {
     render(<App />);
 
-    // 1. Sidebar Brand & Attribution
+    // 1. Email detail pane & list populated with server threads (waits for session resolution)
+    const subjectMatches = await screen.findAllByText(/Q3 Seed Extension Term Sheet/i);
+    expect(subjectMatches.length).toBeGreaterThan(0);
+
+    // 2. Sidebar Brand & Attribution
     expect(screen.getAllByText('JIOSI Inbox').length).toBeGreaterThan(0);
     expect(screen.getAllByText('by Shivsastra').length).toBeGreaterThan(0);
     const newMsgButtons = screen.getAllByRole('button', { name: /new message/i });
     expect(newMsgButtons.length).toBeGreaterThan(0);
 
-    // 2. Navigation items
+    // 3. Navigation items
     expect(screen.getAllByRole('button', { name: /needs reply/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /starred/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /snoozed/i }).length).toBeGreaterThan(0);
-
-    // 3. Email detail pane & list populated with server threads
-    const subjectMatches = await screen.findAllByText(/Q3 Seed Extension Term Sheet/i);
-    expect(subjectMatches.length).toBeGreaterThan(0);
   });
 
   it('switches between folders and updates the displayed threads', async () => {
@@ -164,7 +172,6 @@ describe('JIOSI Inbox Application Integration Tests', () => {
   });
 
   it('displays honest offline alert when backend API fails and allows entering Demo Preview', async () => {
-    vi.spyOn(apiClient, 'initAuth').mockRejectedValue(new Error('Network error'));
     vi.spyOn(apiClient, 'fetchThreads').mockRejectedValue(new Error('Network error'));
 
     render(<App />);
@@ -177,7 +184,48 @@ describe('JIOSI Inbox Application Integration Tests', () => {
     fireEvent.click(demoBtn);
 
     // Demo Mode badge/banner is now visible and demo emails appear
-    expect(await screen.findByText(/Simulation Preview/i)).toBeInTheDocument();
+    expect((await screen.findAllByText(/Simulation Preview/i)).length).toBeGreaterThanOrEqual(1);
     expect((await screen.findAllByText(/Q3 Seed Extension Term Sheet/i)).length).toBeGreaterThan(0);
+  });
+
+  it('renders full-screen AuthPage when unauthenticated and enters simulation preview from auth screen', async () => {
+    vi.spyOn(apiClient, 'getMe').mockRejectedValue(new Error('Unauthenticated'));
+
+    render(<App />);
+
+    // Renders full-screen AuthPage
+    expect(await screen.findByText('Your inbox.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Q3 Seed Extension Term Sheet/i)).not.toBeInTheDocument();
+
+    // Click "Explore in Simulation Preview"
+    const simBtn = screen.getByRole('button', { name: /explore in simulation preview/i });
+    fireEvent.click(simBtn);
+
+    // Now enters preview and shows inbox with demo emails
+    expect((await screen.findAllByText(/Simulation Preview/i)).length).toBeGreaterThanOrEqual(1);
+    expect((await screen.findAllByText(/Q3 Seed Extension Term Sheet/i)).length).toBeGreaterThan(0);
+  });
+
+  it('exits Simulation Preview when clicking Exit Preview & Sign In and returns to AuthPage', async () => {
+    vi.spyOn(apiClient, 'getMe').mockRejectedValue(new Error('Unauthenticated'));
+    vi.spyOn(apiClient, 'logout').mockResolvedValue(undefined);
+
+    render(<App />);
+
+    // Enter simulation preview
+    const simBtn = await screen.findByRole('button', { name: /explore in simulation preview/i });
+    fireEvent.click(simBtn);
+
+    // Verify simulation banner is visible
+    expect((await screen.findAllByText(/Simulation Preview/i)).length).toBeGreaterThanOrEqual(1);
+
+    // Click Exit Preview & Sign In
+    const exitBtn = screen.getByRole('button', { name: /exit preview & sign in/i });
+    fireEvent.click(exitBtn);
+
+    // Returns to AuthPage
+    expect(await screen.findByRole('button', { name: /continue with google/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Q3 Seed Extension Term Sheet/i)).not.toBeInTheDocument();
   });
 });

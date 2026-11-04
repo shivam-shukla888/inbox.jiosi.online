@@ -17,6 +17,7 @@ import { Badge } from '../ui/Badge';
 import { Kbd } from '../ui/Kbd';
 import { ConnectedAccountsView } from './ConnectedAccountsView';
 import { SettingsTab } from '../../types/email';
+import { AuthSessionData } from '../../api/client';
 
 interface SettingsViewProps {
   initialTab?: SettingsTab;
@@ -24,6 +25,7 @@ interface SettingsViewProps {
   isDark: boolean;
   onToggleTheme: () => void;
   onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
+  user?: AuthSessionData | null;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -32,14 +34,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   isDark,
   onToggleTheme,
   onNotify,
+  user,
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
   // Form states
-  const [displayName, setDisplayName] = useState('Alex Rivera');
-  const [workspaceName, setWorkspaceName] = useState('JIOSI AI');
+  const [displayName, setDisplayName] = useState(user?.fullName || 'Authenticated User');
+  const [workspaceName, setWorkspaceName] = useState(user?.defaultWorkspaceName || 'Primary Workspace');
   const [emailSignature, setEmailSignature] = useState(
-    'Best regards,\nAlex Rivera\nFounder & CEO, JIOSI AI\nhttps://jiosi.online'
+    `Best regards,\n${user?.fullName || 'User'}\nJIOSI Inbox by Shivsastra\nhttps://jiosi.online`
   );
   const [defaultTone, setDefaultTone] = useState<'professional' | 'friendly' | 'concise'>(
     'professional'
@@ -198,7 +201,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </form>
           )}
 
-          {activeTab === 'accounts' && <ConnectedAccountsView onNotify={onNotify} />}
+          {activeTab === 'accounts' && <ConnectedAccountsView onNotify={onNotify} user={user} />}
 
           {activeTab === 'notifications' && (
             <div className="space-y-6">

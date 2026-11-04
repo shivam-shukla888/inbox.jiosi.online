@@ -73,7 +73,26 @@ Application Target: [https://inbox.jiosi.online](https://inbox.jiosi.online)
 
 ---
 
-## 4. Quick Start
+## 4. Database & Neon PostgreSQL Integration
+
+JIOSI Inbox supports both local containerized PostgreSQL and serverless **Neon PostgreSQL**:
+
+- **Neon Serverless Architecture**:
+  - **Connection Pooling**: Uses Neon's PgBouncer pooler (`-pooler` host) for high-concurrency runtime queries with `prepareThreshold=0` to guarantee stability in transaction pooling mode.
+  - **HikariCP Configuration**: Tuned for Neon Free tier characteristics:
+    - `maximum-pool-size: 10`: Conservative pool size preventing compute exhaustion.
+    - `minimum-idle: 2`: Ensures immediate readiness for warm requests.
+    - `connection-timeout: 30000ms`: Accommodates serverless cold starts.
+    - `idle-timeout: 300000ms`: Releases idle connections after 5 minutes.
+    - `max-lifetime: 600000ms`: Shorter than PgBouncer server timeout to cycle connections cleanly.
+    - `keepalive-time: 60000ms`: Emits TCP keepalives to prevent NAT/firewall drops.
+    - `leak-detection-threshold: 60000ms`: Detects hanging queries.
+  - **Flyway Migrations**: Automatically routes DDL migrations (`V1__init_schema.sql`, `V2__email_domain.sql`, `V3__google_identity.sql`) to Neon's **direct unpooled connection** (`FLYWAY_URL`), ensuring full session-level advisory lock (`pg_advisory_lock`) support without transaction pool drops.
+  - **Zero-Secret Commits**: All Neon credentials reside in `.env.local` (gitignored).
+
+---
+
+## 5. Quick Start
 
 ### Launch with Docker Compose (Production-Ready)
 
@@ -96,7 +115,7 @@ Application Target: [https://inbox.jiosi.online](https://inbox.jiosi.online)
 
 ---
 
-## 5. Keyboard Navigation Shortcuts
+## 6. Keyboard Navigation Shortcuts
 
 | Shortcut | Action |
 |---|---|
@@ -113,33 +132,34 @@ Application Target: [https://inbox.jiosi.online](https://inbox.jiosi.online)
 
 ---
 
-## 6. Verification and Automated Testing
+## 7. Verification and Automated Testing
 
-### Backend Test Suite (42 / 42 Passing)
+### Backend Test Suite (71 / 71 Passing)
 ```bash
 cd backend
 mvn clean test
 ```
 Tests cover:
-- Authentication & Bearer token verification
-- Cross-workspace isolation (HTTP 403 enforcement)
+- Google OIDC ID token validation and authentication
+- User auto-provisioning and default workspace bootstrap
+- Multi-tenant cross-workspace isolation (HTTP 403 enforcement)
 - Missing workspace header handling (HTTP 400)
-- Email threads & drafts CRUD operations
-- Concurrent service modifications and optimistic locking
-- PostgreSQL Flyway schema migration validation
+- Email threads & drafts CRUD operations with pagination & concurrency
+- PostgreSQL Flyway schema migration validation & seed data
+- Neon serverless connection resilience & HikariCP pooling
 
-### Frontend Quality Checks (29 / 29 Passing)
+### Frontend Quality Checks (46 / 46 Passing)
 ```bash
 cd frontend
 npm run lint         # Zero ESLint warnings or errors
 npm run typecheck    # Zero TypeScript compiler errors
-npm test -- --run    # 29 / 29 Vitest integration and unit tests passing
+npm test -- --run    # 46 / 46 Vitest integration and unit tests passing
 npm run build        # Production bundle built cleanly with gzip optimization
 ```
 
 ---
 
-## 7. Customer Email Data Safety Statement
+## 8. Customer Email Data Safety Statement
 
 > **CRITICAL DATA GOVERNANCE POLICY**:  
 > In compliance with enterprise SaaS privacy standards:

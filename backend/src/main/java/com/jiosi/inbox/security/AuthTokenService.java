@@ -6,12 +6,14 @@ import com.jiosi.inbox.user.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
@@ -21,34 +23,55 @@ public class AuthTokenService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthTokenService.class);
     private static final String HMAC_ALGO = "HmacSHA256";
-    private static final long DEFAULT_EXPIRY_SECONDS = 7 * 24 * 3600; // 7 days
+    private static final String TOKEN_ISSUER = "https://inbox.jiosi.online";
+    private static final String TOKEN_AUDIENCE = "jiosi-inbox-client";
+    private static final String DEFAULT_DEV_SECRET = "jiosi_default_development_hmac_secret_key_minimum_32_bytes_long";
 
     private final byte[] secretKeyBytes;
+    private final long tokenExpirationSeconds;
     private final ObjectMapper objectMapper;
 
     public AuthTokenService(
             @Value("${app.security.jwt-secret:jiosi_default_development_hmac_secret_key_minimum_32_bytes_long}") String secret,
+            @Value("${app.security.jwt-expiration-seconds:3600}") long tokenExpirationSeconds,
+            Environment environment,
             ObjectMapper objectMapper
     ) {
+        boolean isProd = Arrays.asList(environment.getActiveProfiles()).contains("prod")
+                || Arrays.asList(environment.getActiveProfiles()).contains("production");
+
+        if (isProd && DEFAULT_DEV_SECRET.equals(secret)) {
+            log.error("SECURITY CRITICAL: Default HMAC secret detected in production profile! Aborting startup.");
+            throw new IllegalStateException("Production environment must define a secure, non-default JWT_SECRET");
+        }
+
         this.secretKeyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        this.tokenExpirationSeconds = tokenExpirationSeconds;
         this.objectMapper = objectMapper;
     }
 
     public String generateToken(User user) {
         try {
             long now = Instant.now().getEpochSecond();
-            long exp = now + DEFAULT_EXPIRY_SECONDS;
+            long exp = now + tokenExpirationSeconds;
 
             Map<String, Object> payload = Map.of(
                     "sub", user.getId().toString(),
                     "email", user.getEmail(),
                     "name", user.getFullName(),
+                    "iss", TOKEN_ISSUER,
+                    "aud", TOKEN_AUDIENCE,
+                    "jti", UUID.randomUUID().toString(),
                     "iat", now,
                     "exp", exp
             );
 
-            String headerB64 = Base64.getUrlEncoder().withoutPadding().encodeToString("{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
-            String payloadB64 = Base64.getUrlEncoder().withoutPadding().encodeToString(objectMapper.writeValueAsBytes(payload));
+            String headerB64 = Base64.getUrlEncoder().withoutPadding().encodeToString(
+                    "{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8)
+            );
+            String payloadB64 = Base64.getUrlEncoder().withoutPadding().encodeToString(
+                    objectMapper.writeValueAsBytes(payload)
+            );
             String signature = sign(headerB64 + "." + payloadB64);
 
             return headerB64 + "." + payloadB64 + "." + signature;
@@ -66,16 +89,6 @@ public class AuthTokenService {
         String token = authHeader.trim();
         if (token.startsWith("Bearer ")) {
             token = token.substring(7).trim();
-        }
-
-        // Support convenience token in dev / test mode
-        if (token.startsWith("dev-token-")) {
-            String suffix = token.substring("dev-token-".length());
-            try {
-                return UUID.fromString(suffix);
-            } catch (IllegalArgumentException ignored) {
-                // Not a direct UUID suffix
-            }
         }
 
         String[] parts = token.split("\\.");
@@ -138,4 +151,3 @@ public class AuthTokenService {
         return result == 0;
     }
 }
-

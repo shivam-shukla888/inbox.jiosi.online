@@ -22,6 +22,13 @@ interface ProfileMenuProps {
   onOpenPrivacy?: () => void;
   onOpenTerms?: () => void;
   onOpenSupport?: () => void;
+  isDemoMode?: boolean;
+  user?: {
+    fullName: string;
+    email: string;
+    avatarUrl?: string;
+    role?: string;
+  } | null;
 }
 
 export const ProfileMenu: React.FC<ProfileMenuProps> = ({
@@ -34,9 +41,26 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({
   onOpenPrivacy,
   onOpenTerms,
   onOpenSupport,
+  isDemoMode = false,
+  user,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const displayName = user?.fullName || (isDemoMode ? 'Simulation Sandbox' : 'Authenticated User');
+  const displayEmail = user?.email || (isDemoMode ? 'demo@simulation.preview' : '');
+  const displayRole = user?.role
+    ? `${user.role} · Team Tier`
+    : isDemoMode
+    ? 'Sandbox Preview Mode'
+    : 'Workspace Member · Team Tier';
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'JI';
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -70,7 +94,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({
       >
         <div className="relative">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-500 text-white flex items-center justify-center font-mono text-xs font-semibold shadow-xs">
-            AR
+            {initials}
           </div>
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
         </div>
@@ -88,25 +112,25 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({
           <div className="px-3.5 py-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-500 text-white flex items-center justify-center font-mono text-xs font-semibold">
-                AR
+                {initials}
               </div>
               <div className="overflow-hidden">
                 <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
-                  Alex Rivera
+                  {displayName}
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
-                  alex@jiosi.online
+                  {displayEmail}
                 </p>
               </div>
             </div>
             <div className="mt-2.5 flex items-center justify-between px-2 py-1 rounded-md bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-1.5">
                 <Shield className="w-3 h-3 text-brand-500" />
-                <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300">
-                  Workspace Admin · Team Tier
+                <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300 truncate max-w-[140px]">
+                  {displayRole}
                 </span>
               </div>
-              <span className="text-[9px] font-normal text-slate-400 dark:text-slate-500">
+              <span className="text-[9px] font-normal text-slate-400 dark:text-slate-500 shrink-0">
                 by Shivsastra
               </span>
             </div>
@@ -224,7 +248,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({
               className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors text-left"
             >
               <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
+              <span>{isDemoMode ? 'Exit Preview & Sign In' : 'Sign Out'}</span>
             </button>
           </div>
         </div>

@@ -1,24 +1,36 @@
 server:
   port: ${SERVER_PORT:8080}
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:framework}
   compression:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json
+  servlet:
+    session:
+      timeout: 3600s
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:false}
 
 spring:
   application:
     name: jiosi-inbox-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:jiosi_inbox}
-    username: ${POSTGRES_USER:jiosi_user}
-    password: ${POSTGRES_PASSWORD:jiosi_secure_password_example}
+    url: ${DATABASE_URL:${SPRING_DATASOURCE_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:jiosi_inbox}${POSTGRES_SSL_PARAMS:}}}
+    username: ${DATABASE_USERNAME:${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER:jiosi_user}}}
+    password: ${DATABASE_PASSWORD:${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD:jiosi_secure_password_example}}}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:25}
-      minimum-idle: ${HIKARI_MIN_IDLE:5}
-      idle-timeout: 300000
-      connection-timeout: 20000
-      max-lifetime: 1200000
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:10}
+      minimum-idle: ${HIKARI_MIN_IDLE:2}
+      idle-timeout: ${HIKARI_IDLE_TIMEOUT:300000}
+      connection-timeout: ${HIKARI_CONNECTION_TIMEOUT:30000}
+      max-lifetime: ${HIKARI_MAX_LIFETIME:600000}
+      keepalive-time: ${HIKARI_KEEPALIVE_TIME:60000}
+      leak-detection-threshold: 60000
 
   jpa:
     open-in-view: false
@@ -34,6 +46,23 @@ spring:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
+    clean-disabled: true
+    url: ${FLYWAY_URL:${DATABASE_DIRECT_URL:${spring.datasource.url}}}
+    user: ${FLYWAY_USER:${DATABASE_USERNAME:${spring.datasource.username}}}
+    password: ${FLYWAY_PASSWORD:${DATABASE_PASSWORD:${spring.datasource.password}}}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:google-client-id-placeholder}
+            client-secret: ${GOOGLE_CLIENT_SECRET:google-client-secret-placeholder}
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
 
 management:
   endpoints:
@@ -55,8 +84,12 @@ logging:
 
 app:
   version: 0.1.0-alpha
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
   security:
     enabled: ${SECURITY_ENABLED:true}
     jwt-secret: ${JWT_SECRET:jiosi_default_development_hmac_secret_key_minimum_32_bytes_long}
+    jwt-expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:google-client-id-placeholder}
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,http://localhost:80,https://inbox.jiosi.online}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,http://localhost:80,https://inbox.jiosi.online,https://jiosi-inbox-api.onrender.com}

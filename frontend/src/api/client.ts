@@ -1,7 +1,7 @@
 import { HealthApiResponse } from '../types/health';
-import { EmailThread } from '../types/email';
+import { EmailThread, GmailStatusData, GmailMessagesPageData, GmailMessageDetail } from '../types/email';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:8080');
 export const DEFAULT_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000001';
 
 export interface HealthCheckResult {
@@ -38,11 +38,12 @@ export interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
-  timestamp: string;
+  timestamp?: string;
+  code?: string;
 }
 
 export interface AuthSessionData {
-  token: string;
+  token?: string;
   userId: string;
   email: string;
   fullName: string;
@@ -52,17 +53,27 @@ export interface AuthSessionData {
   role: string;
 }
 
+function getXsrfToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export class ApiClient {
   private baseUrl: string;
   private workspaceId: string;
   private authToken: string | null = null;
+  private onUnauthorizedCallback: (() => void) | null = null;
 
   constructor(baseUrl: string = API_BASE_URL, workspaceId: string = DEFAULT_WORKSPACE_ID) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.workspaceId = workspaceId;
-    // Check if token was saved in localStorage
-    if (typeof window !== 'undefined' && window.localStorage) {
-      this.authToken = localStorage.getItem('jiosi_auth_token');
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      this.authToken = sessionStorage.getItem('jiosi_auth_token');
+      const savedWs = sessionStorage.getItem('jiosi_workspace_id');
+      if (savedWs) {
+        this.workspaceId = savedWs;
+      }
     }
   }
 
@@ -76,6 +87,13 @@ export class ApiClient {
 
   setWorkspaceId(id: string) {
     this.workspaceId = id;
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      if (id) {
+        sessionStorage.setItem('jiosi_workspace_id', id);
+      } else {
+        sessionStorage.removeItem('jiosi_workspace_id');
+      }
+    }
   }
 
   getAuthToken(): string | null {
@@ -84,49 +102,130 @@ export class ApiClient {
 
   setAuthToken(token: string | null) {
     this.authToken = token;
-    if (typeof window !== 'undefined' && window.localStorage) {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
       if (token) {
-        localStorage.setItem('jiosi_auth_token', token);
+        sessionStorage.setItem('jiosi_auth_token', token);
       } else {
-        localStorage.removeItem('jiosi_auth_token');
+        sessionStorage.removeItem('jiosi_auth_token');
       }
     }
   }
 
-  private getHeaders(): HeadersInit {
+  setOnUnauthorized(callback: () => void) {
+    this.onUnauthorizedCallback = callback;
+  }
+
+  getGoogleOAuthUrl(): string {
+    return `${this.baseUrl}/oauth2/authorization/google`;
+  }
+
+  private getHeaders(isMutating: boolean = false, includeWorkspace: boolean = true): HeadersInit {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'X-Workspace-Id': this.workspaceId,
     };
+    if (includeWorkspace && this.workspaceId) {
+      headers['X-Workspace-Id'] = this.workspaceId;
+    }
     if (this.authToken) {
       headers['Authorization'] = this.authToken.startsWith('Bearer ') ? this.authToken : `Bearer ${this.authToken}`;
+    }
+    if (isMutating) {
+      const xsrf = getXsrfToken();
+      if (xsrf) {
+        headers['X-XSRF-TOKEN'] = xsrf;
+      }
     }
     return headers;
   }
 
-  async initAuth(email: string = 'alex@jiosi.online'): Promise<AuthSessionData> {
-    const res = await fetch(`${this.baseUrl}/api/v1/auth/token`, {
+  private async handleResponse<T>(res: Response): Promise<T> {
+    if (res.status === 401) {
+      this.setAuthToken(null);
+      if (this.onUnauthorizedCallback) {
+        this.onUnauthorizedCallback();
+      }
+      throw new Error('Authentication required');
+    }
+    if (!res.ok) {
+      let errorMsg = `HTTP ${res.status}: ${res.statusText}`;
+      try {
+        const body = await res.json();
+        if (body.message) errorMsg = body.message;
+      } catch {
+        // use default errorMsg
+      }
+      throw new Error(errorMsg);
+    }
+    const json: ApiResponse<T> = await res.json();
+    return json.data;
+  }
+
+  async fetchCsrf(): Promise<void> {
+    try {
+      await fetch(`${this.baseUrl}/api/v1/auth/csrf`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' },
+      });
+    } catch {
+      // Non-fatal if offline
+    }
+  }
+
+  async loginWithGoogle(idToken: string): Promise<AuthSessionData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/auth/google`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: JSON.stringify({ email }),
+      credentials: 'include',
+      body: JSON.stringify({ idToken }),
     });
 
-    if (!res.ok) {
-      throw new Error(`Authentication failed: HTTP ${res.status}`);
+    const data = await this.handleResponse<AuthSessionData>(res);
+    if (data.token) {
+      this.setAuthToken(data.token);
     }
+    if (data.defaultWorkspaceId) {
+      this.setWorkspaceId(data.defaultWorkspaceId);
+    }
+    return data;
+  }
 
-    const body: ApiResponse<AuthSessionData> = await res.json();
-    if (body.data && body.data.token) {
-      this.setAuthToken(body.data.token);
-      if (body.data.defaultWorkspaceId) {
-        this.setWorkspaceId(body.data.defaultWorkspaceId);
-      }
+  async getMe(): Promise<AuthSessionData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/auth/me`, {
+      method: 'GET',
+      headers: this.getHeaders(false, false),
+      credentials: 'include',
+    });
+
+    const data = await this.handleResponse<AuthSessionData>(res);
+    if (data.token) {
+      this.setAuthToken(data.token);
     }
-    return body.data;
+    if (data.defaultWorkspaceId) {
+      this.setWorkspaceId(data.defaultWorkspaceId);
+    }
+    return data;
+  }
+
+  async initAuth(_deprecatedEmail?: string): Promise<AuthSessionData> {
+    return this.getMe();
+  }
+
+  async logout(): Promise<void> {
+    try {
+      await fetch(`${this.baseUrl}/api/v1/auth/logout`, {
+        method: 'POST',
+        headers: this.getHeaders(true, false),
+        credentials: 'include',
+      });
+    } finally {
+      this.setAuthToken(null);
+      this.setWorkspaceId(DEFAULT_WORKSPACE_ID);
+    }
   }
 
   async checkHealth(): Promise<HealthCheckResult> {
@@ -181,29 +280,21 @@ export class ApiClient {
 
     const res = await fetch(`${this.baseUrl}/api/v1/threads?${params.toString()}`, {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(false),
+      credentials: 'include',
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to fetch threads: HTTP ${res.status}`);
-    }
-
-    const body: ApiResponse<PagedThreadsData> = await res.json();
-    return body.data;
+    return this.handleResponse<PagedThreadsData>(res);
   }
 
   async fetchThreadDetail(id: string): Promise<EmailThread> {
     const res = await fetch(`${this.baseUrl}/api/v1/threads/${id}`, {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(false),
+      credentials: 'include',
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to fetch thread: HTTP ${res.status}`);
-    }
-
-    const body: ApiResponse<EmailThread> = await res.json();
-    return body.data;
+    return this.handleResponse<EmailThread>(res);
   }
 
   async searchThreads(query: string, page: number = 0, size: number = 20): Promise<PagedThreadsData> {
@@ -215,135 +306,106 @@ export class ApiClient {
 
     const res = await fetch(`${this.baseUrl}/api/v1/threads/search?${params.toString()}`, {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(false),
+      credentials: 'include',
     });
 
-    if (!res.ok) {
-      throw new Error(`Search failed: HTTP ${res.status}`);
-    }
-
-    const body: ApiResponse<PagedThreadsData> = await res.json();
-    return body.data;
+    return this.handleResponse<PagedThreadsData>(res);
   }
 
   async updateRead(id: string, unread: boolean): Promise<EmailThread> {
     const res = await fetch(`${this.baseUrl}/api/v1/threads/${id}/read`, {
       method: 'PATCH',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(true),
+      credentials: 'include',
       body: JSON.stringify({ unread }),
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to update read status: HTTP ${res.status}`);
-    }
-
-    const body: ApiResponse<EmailThread> = await res.json();
-    return body.data;
+    return this.handleResponse<EmailThread>(res);
   }
 
   async updateStar(id: string, starred: boolean): Promise<EmailThread> {
     const res = await fetch(`${this.baseUrl}/api/v1/threads/${id}/star`, {
       method: 'PATCH',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(true),
+      credentials: 'include',
       body: JSON.stringify({ starred }),
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to update star status: HTTP ${res.status}`);
-    }
-
-    const body: ApiResponse<EmailThread> = await res.json();
-    return body.data;
+    return this.handleResponse<EmailThread>(res);
   }
 
   async updateArchive(id: string, archived: boolean): Promise<EmailThread> {
     const res = await fetch(`${this.baseUrl}/api/v1/threads/${id}/archive`, {
       method: 'PATCH',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(true),
+      credentials: 'include',
       body: JSON.stringify({ archived }),
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to update archive status: HTTP ${res.status}`);
-    }
-
-    const body: ApiResponse<EmailThread> = await res.json();
-    return body.data;
+    return this.handleResponse<EmailThread>(res);
   }
 
   async updateSnooze(id: string, snoozed: boolean, snoozedUntil?: string): Promise<EmailThread> {
     const res = await fetch(`${this.baseUrl}/api/v1/threads/${id}/snooze`, {
       method: 'PATCH',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(true),
+      credentials: 'include',
       body: JSON.stringify({ snoozed, snoozedUntil }),
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to snooze thread: HTTP ${res.status}`);
-    }
-
-    const body: ApiResponse<EmailThread> = await res.json();
-    return body.data;
+    return this.handleResponse<EmailThread>(res);
   }
 
   async batchRead(threadIds: string[], unread: boolean): Promise<void> {
     const res = await fetch(`${this.baseUrl}/api/v1/threads/batch/read`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(true),
+      credentials: 'include',
       body: JSON.stringify({ threadIds, unread }),
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to batch update read status: HTTP ${res.status}`);
-    }
+    await this.handleResponse<void>(res);
   }
 
   async batchArchive(threadIds: string[], archived: boolean): Promise<void> {
     const res = await fetch(`${this.baseUrl}/api/v1/threads/batch/archive`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(true),
+      credentials: 'include',
       body: JSON.stringify({ threadIds, archived }),
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to batch archive: HTTP ${res.status}`);
-    }
+    await this.handleResponse<void>(res);
   }
 
   async sendReply(threadId: string, recipientEmail: string, bodyText: string): Promise<EmailThread> {
     const res = await fetch(`${this.baseUrl}/api/v1/threads/${threadId}/reply`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(true),
+      credentials: 'include',
       body: JSON.stringify({ recipientEmail, body: bodyText }),
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to send reply: HTTP ${res.status}`);
-    }
-
-    const body: ApiResponse<EmailThread> = await res.json();
-    return body.data;
+    return this.handleResponse<EmailThread>(res);
   }
 
   async sendNewEmail(toEmail: string, subject: string, bodyText: string): Promise<EmailThread> {
     const res = await fetch(`${this.baseUrl}/api/v1/threads/send`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(true),
+      credentials: 'include',
       body: JSON.stringify({ toEmail, subject, body: bodyText }),
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to send email: HTTP ${res.status}`);
-    }
-
-    const body: ApiResponse<EmailThread> = await res.json();
-    return body.data;
+    return this.handleResponse<EmailThread>(res);
   }
 
   async saveDraft(toEmail: string, recipientName: string, subject: string, bodyText: string, threadId?: string): Promise<{ id: string }> {
     const res = await fetch(`${this.baseUrl}/api/v1/drafts`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(true),
+      credentials: 'include',
       body: JSON.stringify({
         threadId: threadId || null,
         toEmail,
@@ -353,37 +415,81 @@ export class ApiClient {
       }),
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to save draft: HTTP ${res.status}`);
-    }
-
-    const body: ApiResponse<{ id: string }> = await res.json();
-    return body.data;
+    return this.handleResponse<{ id: string }>(res);
   }
 
   async fetchDrafts(): Promise<Array<{ id: string; toEmail: string; subject: string; body: string; updatedAt: string }>> {
     const res = await fetch(`${this.baseUrl}/api/v1/drafts`, {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(false),
+      credentials: 'include',
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to fetch drafts: HTTP ${res.status}`);
-    }
-
-    const body: ApiResponse<{ content: Array<{ id: string; toEmail: string; subject: string; body: string; updatedAt: string }> }> = await res.json();
-    return body.data.content;
+    const data = await this.handleResponse<{ content: Array<{ id: string; toEmail: string; subject: string; body: string; updatedAt: string }> }>(res);
+    return data.content || [];
   }
 
   async deleteDraft(id: string): Promise<void> {
     const res = await fetch(`${this.baseUrl}/api/v1/drafts/${id}`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(true),
+      credentials: 'include',
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to delete draft: HTTP ${res.status}`);
+    await this.handleResponse<void>(res);
+  }
+
+  // =========================================================================
+  // GMAIL API INTEGRATION (READ-ONLY)
+  // =========================================================================
+
+  async getGmailStatus(): Promise<ApiResponse<GmailStatusData>> {
+    const res = await fetch(`${this.baseUrl}/api/v1/gmail/status`, {
+      method: 'GET',
+      headers: this.getHeaders(false, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<ApiResponse<GmailStatusData>>(res);
+  }
+
+  async getGmailConnectUrl(): Promise<ApiResponse<{ connectUrl: string }>> {
+    const res = await fetch(`${this.baseUrl}/api/v1/gmail/connect-url`, {
+      method: 'GET',
+      headers: this.getHeaders(false, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<ApiResponse<{ connectUrl: string }>>(res);
+  }
+
+  async disconnectGmail(): Promise<ApiResponse<{ success: boolean; status: string }>> {
+    const res = await fetch(`${this.baseUrl}/api/v1/gmail/disconnect`, {
+      method: 'POST',
+      headers: this.getHeaders(true, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<ApiResponse<{ success: boolean; status: string }>>(res);
+  }
+
+  async getGmailMessages(maxResults: number = 20, pageToken?: string): Promise<ApiResponse<GmailMessagesPageData>> {
+    let url = `${this.baseUrl}/api/v1/gmail/messages?maxResults=${maxResults}`;
+    if (pageToken) {
+      url += `&pageToken=${encodeURIComponent(pageToken)}`;
     }
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: this.getHeaders(false, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<ApiResponse<GmailMessagesPageData>>(res);
+  }
+
+  async getGmailMessageDetail(messageId: string): Promise<ApiResponse<GmailMessageDetail>> {
+    const res = await fetch(`${this.baseUrl}/api/v1/gmail/messages/${encodeURIComponent(messageId)}`, {
+      method: 'GET',
+      headers: this.getHeaders(false, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<ApiResponse<GmailMessageDetail>>(res);
   }
 }
 

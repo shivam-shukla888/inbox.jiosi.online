@@ -12,9 +12,9 @@ import { PrivacyView } from './components/public/PrivacyView';
 import { TermsView } from './components/public/TermsView';
 import { SupportView } from './components/public/SupportView';
 import { PublicProductLanding } from './components/public/PublicProductLanding';
-import { SignInModal } from './components/auth/SignInModal';
+import { AuthPage } from './components/auth/AuthPage';
 import { Toast, ToastType } from './components/ui/Toast';
-import { apiClient, FolderCountsData } from './api/client';
+import { apiClient, FolderCountsData, AuthSessionData } from './api/client';
 import { DEMO_EMAILS } from './data/mockEmails';
 import {
   EmailThread,
@@ -24,7 +24,11 @@ import {
   SettingsTab,
 } from './types/email';
 
+export type AuthState = 'INITIALIZING' | 'AUTHENTICATED' | 'UNAUTHENTICATED' | 'AUTHENTICATION_ERROR';
+
 export const App: React.FC = () => {
+  // Authentication State Machine
+  const [authState, setAuthState] = useState<AuthState>('INITIALIZING');
   // Theme state: initialized from localStorage or prefers-color-scheme
   const [isDark, setIsDark] = useState<boolean>(() => {
     const saved = localStorage.getItem('jiosi_theme');
@@ -69,7 +73,8 @@ export const App: React.FC = () => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
-  const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AuthSessionData | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Toast feedback state
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -99,14 +104,53 @@ export const App: React.FC = () => {
     }
   }, [currentView]);
 
-  // Initial Route Check (support direct links to public docs/legal)
+  // Initial Route & Session Validation Check
   useEffect(() => {
+    apiClient.setOnUnauthorized(() => {
+      setCurrentUser(null);
+      setAuthState('UNAUTHENTICATED');
+    });
+    apiClient.fetchCsrf();
+
+    let hasUrlError = false;
     if (typeof window !== 'undefined' && window.location) {
       const p = window.location.pathname;
       if (p === '/privacy') setCurrentView('privacy');
       else if (p === '/terms') setCurrentView('terms');
       else if (p === '/support') setCurrentView('support');
       else if (p === '/overview') setCurrentView('landing');
+
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get('auth_error') || params.get('gmail_error');
+      if (err) {
+        hasUrlError = true;
+        setAuthError(decodeURIComponent(err));
+        setAuthState('AUTHENTICATION_ERROR');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (params.get('gmail_connected')) {
+        showToast('Gmail account connected successfully! Read-only sync active.', 'success');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+
+    if (!hasUrlError) {
+      apiClient.getMe()
+        .then((res) => {
+          const resObj = res as unknown as { data?: AuthSessionData } & AuthSessionData;
+          const user = resObj?.data || resObj;
+          if (user && (user.userId || user.email)) {
+            if (user.defaultWorkspaceId) {
+              apiClient.setWorkspaceId(user.defaultWorkspaceId);
+            }
+            setCurrentUser(user);
+            setAuthState('AUTHENTICATED');
+          } else {
+            setAuthState('UNAUTHENTICATED');
+          }
+        })
+        .catch(() => {
+          setAuthState('UNAUTHENTICATED');
+        });
     }
   }, []);
 
@@ -115,40 +159,39 @@ export const App: React.FC = () => {
     folder: EmailFolder = currentFolder,
     filter: CategoryFilter = currentFilter
   ) => {
+    if (isDemoMode) {
+      setEmails(DEMO_EMAILS);
+      setIsLoading(false);
+      return;
+    }
+    if (!currentUser) {
+      return;
+    }
+
     setIsLoading(true);
     setLoadError(null);
 
     try {
-      // 1. Ensure authenticated session exists
-      if (!apiClient.getAuthToken()) {
-        try {
-          await apiClient.initAuth();
-        } catch {
-          // If auth endpoint unavailable, proceed to fetch attempt
-        }
-      }
-
-      // 2. Fetch threads
       const data = await apiClient.fetchThreads(folder, filter, 0, 25);
       if (data && Array.isArray(data.threads)) {
-        setEmails(data.threads); // Replaces old content with exact server content (even if 0)
+        setEmails(data.threads);
         if (data.folderCounts) setServerCounts(data.folderCounts);
-        setIsDemoMode(false);
       }
     } catch (err) {
       const reason = err instanceof Error ? err.message : 'Connection failed';
       setLoadError(`Unable to reach backend API (${reason}). Working in offline mode.`);
       setEmails([]);
-      setIsDemoMode(false);
     } finally {
       setIsLoading(false);
     }
-  }, [currentFolder, currentFilter]);
+  }, [currentFolder, currentFilter, currentUser, isDemoMode]);
 
   // Initial and folder/filter change trigger
   useEffect(() => {
-    loadThreads(currentFolder, currentFilter);
-  }, [currentFolder, currentFilter, loadThreads]);
+    if (currentUser || isDemoMode) {
+      loadThreads(currentFolder, currentFilter);
+    }
+  }, [currentFolder, currentFilter, currentUser, isDemoMode, loadThreads]);
 
   // Fetch detailed email when selectedEmailId changes
   useEffect(() => {
@@ -496,10 +539,10 @@ export const App: React.FC = () => {
         const newThread: EmailThread = {
           id: `sent-${Date.now()}`,
           sender: {
-            name: 'Alex Rivera',
-            email: 'alex@jiosi.online',
-            avatar: 'AR',
-            role: 'Founder',
+            name: currentUser?.fullName || (isDemoMode ? 'Simulation User' : 'Authenticated User'),
+            email: currentUser?.email || (isDemoMode ? 'demo@simulation.preview' : 'user@jiosi.online'),
+            avatar: (currentUser?.fullName?.[0] || (isDemoMode ? 'S' : 'U')).toUpperCase(),
+            role: currentUser?.role || (isDemoMode ? 'Sandbox' : 'User'),
           },
           recipient: { name: to, email: to },
           subject: subject || '(No subject)',
@@ -632,6 +675,104 @@ export const App: React.FC = () => {
     handleSnooze,
   ]);
 
+  const handleSignOut = async () => {
+    try {
+      await apiClient.logout();
+    } catch {
+      // ignore
+    }
+    setCurrentUser(null);
+    setIsDemoMode(false);
+    setEmails([]);
+    setAuthState('UNAUTHENTICATED');
+    showToast('Signed out successfully', 'info');
+  };
+
+  const handleGoogleSignIn = () => {
+    window.location.href = apiClient.getGoogleOAuthUrl();
+  };
+
+  const handleExploreDemo = () => {
+    setEmails(DEMO_EMAILS);
+    setIsDemoMode(true);
+    setAuthState('AUTHENTICATED');
+    showToast('Simulation preview active', 'info');
+  };
+
+  if (authState === 'INITIALIZING') {
+    return (
+      <div className="min-h-screen bg-[#FAF9F6] flex flex-col items-center justify-center text-[#111112] font-sans">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-lg bg-[#111112] flex items-center justify-center font-mono font-bold text-sm text-white shadow-xs">
+            JI
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-semibold tracking-tight text-[#111112]">JIOSI Inbox</span>
+              <span className="text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded bg-[#FAF2ED] text-[#B8481D] border border-[#F0D5C7]">
+                by Shivsastra
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-[#78716C]">
+          <div className="w-4 h-4 border-2 border-[#B8481D] border-t-transparent rounded-full animate-spin" />
+          <span>Verifying security session...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Strict Unauthenticated Gate - No Shell or Mock Data Leakage
+  if (!currentUser && !isDemoMode) {
+    if (currentView === 'privacy') {
+      return (
+        <div className="min-h-screen bg-slate-900 text-slate-100">
+          <PrivacyView onBack={() => setCurrentView('mail')} />
+        </div>
+      );
+    }
+    if (currentView === 'terms') {
+      return (
+        <div className="min-h-screen bg-slate-900 text-slate-100">
+          <TermsView onBack={() => setCurrentView('mail')} />
+        </div>
+      );
+    }
+    if (currentView === 'support') {
+      return (
+        <div className="min-h-screen bg-slate-900 text-slate-100">
+          <SupportView onBack={() => setCurrentView('mail')} />
+        </div>
+      );
+    }
+    if (currentView === 'landing') {
+      return (
+        <PublicProductLanding
+          onLaunchApp={() => setCurrentView('mail')}
+          onOpenPrivacy={() => setCurrentView('privacy')}
+          onOpenTerms={() => setCurrentView('terms')}
+          onOpenSupport={() => setCurrentView('support')}
+        />
+      );
+    }
+
+    return (
+      <AuthPage
+        onGoogleSignIn={handleGoogleSignIn}
+        onExploreDemo={handleExploreDemo}
+        error={authError}
+        onClearError={() => {
+          setAuthError(null);
+          setAuthState('UNAUTHENTICATED');
+        }}
+        onOpenPrivacy={() => setCurrentView('privacy')}
+        onOpenTerms={() => setCurrentView('terms')}
+        onOpenSupport={() => setCurrentView('support')}
+      />
+    );
+  }
+
   return (
     <>
       <AppShell
@@ -649,6 +790,8 @@ export const App: React.FC = () => {
             folderCounts={folderCounts}
             isOpenMobile={isMobileMenuOpen}
             onCloseMobile={() => setIsMobileMenuOpen(false)}
+            user={currentUser}
+            isDemoMode={isDemoMode}
           />
         }
         header={
@@ -661,7 +804,8 @@ export const App: React.FC = () => {
             isDark={isDark}
             onToggleTheme={toggleTheme}
             onOpenSettings={handleOpenSettings}
-            onSignOut={() => setIsSignInOpen(true)}
+            onSignOut={handleSignOut}
+            user={currentUser}
             onOpenLanding={() => setCurrentView('landing')}
             onOpenPrivacy={() => setCurrentView('privacy')}
             onOpenTerms={() => setCurrentView('terms')}
@@ -677,6 +821,7 @@ export const App: React.FC = () => {
               isDark={isDark}
               onToggleTheme={toggleTheme}
               onNotify={showToast}
+              user={currentUser}
             />
           ) : currentView === 'privacy' ? (
             <PrivacyView onBack={() => setCurrentView('mail')} />
@@ -704,12 +849,20 @@ export const App: React.FC = () => {
                     <strong>Simulation Preview</strong>: Sample threads. Connect a mailbox in Settings to sync live email.
                   </span>
                 </div>
-                <button
-                  onClick={() => loadThreads(currentFolder, currentFilter)}
-                  className="underline hover:no-underline font-medium ml-2 text-amber-800 dark:text-amber-300 shrink-0"
-                >
-                  Retry Sync
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSignOut}
+                    className="font-medium px-2.5 py-1 rounded bg-amber-200 dark:bg-amber-900/80 text-amber-900 dark:text-amber-100 hover:bg-amber-300 dark:hover:bg-amber-800 transition text-[11px]"
+                  >
+                    Exit Preview & Sign In
+                  </button>
+                  <button
+                    onClick={() => loadThreads(currentFolder, currentFilter)}
+                    className="underline hover:no-underline font-medium text-amber-800 dark:text-amber-300 shrink-0 ml-1 text-[11px]"
+                  >
+                    Retry Sync
+                  </button>
+                </div>
               </div>
             )}
 
@@ -811,22 +964,6 @@ export const App: React.FC = () => {
         onSelectEmail={(id) => {
           setCurrentView('mail');
           handleSelectEmail(id);
-        }}
-      />
-
-      {/* Sign In Dialog */}
-      <SignInModal
-        isOpen={isSignInOpen}
-        onClose={() => setIsSignInOpen(false)}
-        onSignIn={async (email) => {
-          await apiClient.initAuth(email);
-          await loadThreads(currentFolder, currentFilter);
-          showToast(`Signed in as ${email}`, 'success');
-        }}
-        onExploreDemo={() => {
-          setEmails(DEMO_EMAILS);
-          setIsDemoMode(true);
-          showToast('Simulation preview active', 'info');
         }}
       />
 

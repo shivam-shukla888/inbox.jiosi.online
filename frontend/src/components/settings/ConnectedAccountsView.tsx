@@ -1,68 +1,94 @@
-import React, { useState } from 'react';
-import { RefreshCw, Plus, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { RefreshCw, Plus, ShieldCheck, Mail, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { ConnectedAccountItem } from '../../types/email';
+import { GmailStatusData } from '../../types/email';
+import { AuthSessionData, apiClient } from '../../api/client';
 
 interface ConnectedAccountsViewProps {
   onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
+  user?: AuthSessionData | null;
 }
 
-export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ onNotify }) => {
-  const [accounts, setAccounts] = useState<ConnectedAccountItem[]>([
-    {
-      id: 'acc-1',
-      provider: 'gmail',
-      email: 'alex@jiosi.online',
-      status: 'connected',
-      lastSync: '2 mins ago',
-      isPrimary: true,
-    },
-    {
-      id: 'acc-2',
-      provider: 'outlook',
-      email: 'alex.rivera@enterprisepartners.com',
-      status: 'available',
-      isPrimary: false,
-    },
-  ]);
+export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ onNotify, user }) => {
+  const [gmailStatus, setGmailStatus] = useState<GmailStatusData | null>(null);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
-  const [isSyncing, setIsSyncing] = useState<string | null>(null);
-
-  const handleSync = (id: string) => {
-    setIsSyncing(id);
-    setTimeout(() => {
-      setIsSyncing(null);
-      setAccounts((prev) =>
-        prev.map((acc) => (acc.id === id ? { ...acc, lastSync: 'Just now' } : acc))
-      );
-      onNotify?.('Mailbox synchronized successfully.', 'success');
-    }, 1200);
+  const fetchStatus = async () => {
+    setIsLoadingStatus(true);
+    setStatusError(null);
+    try {
+      const res = await apiClient.getGmailStatus();
+      if (res && res.data) {
+        setGmailStatus(res.data);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not check Gmail account status';
+      setStatusError(message);
+    } finally {
+      setIsLoadingStatus(false);
+    }
   };
 
-  const handleToggleDisconnect = (id: string) => {
-    setAccounts((prev) =>
-      prev.map((acc) => {
-        if (acc.id === id) {
-          const newStatus = acc.status === 'connected' ? 'disconnected' : 'connected';
-          const msg =
-            newStatus === 'connected'
-              ? `Reconnected ${acc.email}`
-              : `Disconnected ${acc.email}`;
-          onNotify?.(msg, 'info');
-          return { ...acc, status: newStatus };
-        }
-        return acc;
-      })
-    );
+  useEffect(() => {
+    fetchStatus();
+  }, []);
+
+  const handleConnectGmail = async () => {
+    setIsConnecting(true);
+    try {
+      onNotify?.('Requesting secure Google OAuth authorization for Gmail...', 'info');
+      const res = await apiClient.getGmailConnectUrl();
+      if (res && res.data && res.data.connectUrl) {
+        window.location.href = res.data.connectUrl;
+      } else {
+        throw new Error('No authorization URL returned by server');
+      }
+    } catch (err: unknown) {
+      setIsConnecting(false);
+      const msg = err instanceof Error ? err.message : 'Failed to initiate Gmail connection';
+      onNotify?.(msg, 'error');
+    }
   };
 
-  const handleConnectNew = (provider: 'gmail' | 'outlook') => {
-    onNotify?.(
-      `Initiating secure OAuth 2.0 flow for ${provider === 'gmail' ? 'Google Workspace' : 'Microsoft 365'}...`,
-      'info'
-    );
+  const handleDisconnectGmail = async () => {
+    if (!window.confirm('Disconnect your Gmail account from JIOSI Inbox? Tokens stored on the server will be revoked.')) {
+      return;
+    }
+    setIsDisconnecting(true);
+    try {
+      await apiClient.disconnectGmail();
+      setGmailStatus((prev) => prev ? { ...prev, connected: false, status: 'DISCONNECTED' } : null);
+      onNotify?.('Gmail account disconnected and tokens securely revoked.', 'info');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to disconnect Gmail account';
+      onNotify?.(msg, 'error');
+    } finally {
+      setIsDisconnecting(false);
+    }
   };
+
+  const handleSyncGmail = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await apiClient.getGmailMessages(15);
+      const count = res?.data?.messages?.length || 0;
+      setGmailStatus((prev) => prev ? { ...prev, lastSyncAt: new Date().toISOString() } : null);
+      onNotify?.(`Successfully synchronized ${count} messages from Gmail Inbox.`, 'success');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to synchronize Gmail inbox';
+      onNotify?.(msg, 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const isConnected = gmailStatus?.connected && gmailStatus?.status === 'CONNECTED';
+  const isRevoked = gmailStatus?.status === 'REVOKED';
 
   return (
     <div className="space-y-6">
@@ -71,7 +97,7 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
           Connected Email Accounts
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Connect your Google Workspace or Microsoft Outlook accounts to power JIOSI's intelligent triage and AI reply drafting.
+          Connect your Google Workspace or Gmail account with strictly read-only access to power JIOSI's intelligent triage and inbox view.
         </p>
       </div>
 
@@ -82,115 +108,120 @@ export const ConnectedAccountsView: React.FC<ConnectedAccountsViewProps> = ({ on
           <span className="font-semibold text-brand-900 dark:text-brand-200">
             Zero-Token Exposure Architecture:
           </span>{' '}
-          All OAuth tokens and refresh keys are encrypted server-side using AES-256-GCM. JIOSI client interfaces never store or expose credentials.
+          Strictly read-only. JIOSI Inbox requests only <code className="px-1 py-0.5 rounded bg-brand-100/60 dark:bg-brand-900/60 text-[11px] font-mono">gmail.readonly</code>. Tokens are encrypted server-side with AES-256-GCM. Sending, deleting, archiving, or altering mailboxes is strictly disabled.
         </div>
       </div>
 
-      {/* Account Cards */}
+      {/* Error alert if status check failed */}
+      {statusError && (
+        <div className="flex items-center gap-2.5 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-200">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>{statusError}</span>
+          <Button variant="ghost" size="sm" onClick={fetchStatus} className="ml-auto text-xs">
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {/* Gmail Account Card */}
       <div className="space-y-3">
-        {accounts.map((acc) => {
-          const isGmail = acc.provider === 'gmail';
-          return (
-            <div
-              key={acc.id}
-              className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
-            >
-              <div className="flex items-center gap-3.5">
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
-                    isGmail
-                      ? 'bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/60'
-                      : 'bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60'
-                  }`}
-                >
-                  {isGmail ? 'G' : 'M'}
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                      {isGmail ? 'Google Workspace / Gmail' : 'Microsoft 365 / Outlook'}
-                    </span>
-                    {acc.isPrimary && (
-                      <Badge variant="brand">Primary</Badge>
-                    )}
-                    {acc.status === 'connected' ? (
-                      <Badge variant="success" dot>
-                        Connected
-                      </Badge>
-                    ) : acc.status === 'available' ? (
-                      <Badge variant="outline">Available</Badge>
-                    ) : (
-                      <Badge variant="default">Disconnected</Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                    {acc.email}
-                  </p>
-                  {acc.lastSync && acc.status === 'connected' && (
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1">
-                      <span>Last synchronized:</span>
-                      <span className="font-medium text-slate-600 dark:text-slate-300">
-                        {acc.lastSync}
-                      </span>
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-2 self-end sm:self-center">
-                {acc.status === 'connected' && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleSync(acc.id)}
-                    isLoading={isSyncing === acc.id}
-                    icon={<RefreshCw className="w-3.5 h-3.5" />}
-                  >
-                    Sync Now
-                  </Button>
-                )}
-
-                {acc.status === 'available' ? (
-                  <Button
-                    variant="brand"
-                    size="sm"
-                    onClick={() => handleConnectNew('outlook')}
-                    icon={<Plus className="w-3.5 h-3.5" />}
-                  >
-                    Connect
-                  </Button>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleToggleDisconnect(acc.id)}
-                    className={
-                      acc.status === 'connected'
-                        ? 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
-                        : 'text-brand-600 dark:text-brand-400'
-                    }
-                  >
-                    {acc.status === 'connected' ? 'Disconnect' : 'Reconnect'}
-                  </Button>
-                )}
-              </div>
+        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/60">
+              <Mail className="w-5 h-5" />
             </div>
-          );
-        })}
-      </div>
 
-      {/* Connect additional account action */}
-      <div className="pt-2">
-        <Button
-          variant="secondary"
-          size="md"
-          onClick={() => handleConnectNew('gmail')}
-          icon={<Plus className="w-4 h-4" />}
-        >
-          Connect Another Account (Google or Microsoft)
-        </Button>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Google Workspace / Gmail
+                </span>
+                <Badge variant="outline">Read-Only</Badge>
+                {isLoadingStatus ? (
+                  <Badge variant="default">Checking...</Badge>
+                ) : isConnected ? (
+                  <Badge variant="success" dot>Connected</Badge>
+                ) : isRevoked ? (
+                  <Badge variant="urgent" dot>Authorization Revoked</Badge>
+                ) : (
+                  <Badge variant="default">Not Connected</Badge>
+                )}
+              </div>
+
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                {gmailStatus?.email || user?.email || 'No account linked'}
+              </p>
+
+              {gmailStatus?.lastSyncAt && isConnected && (
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1">
+                  <span>Last synchronized:</span>
+                  <span className="font-medium text-slate-600 dark:text-slate-300">
+                    {new Date(gmailStatus.lastSyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 self-end sm:self-center">
+            {isConnected ? (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSyncGmail}
+                  isLoading={isSyncing}
+                  icon={<RefreshCw className="w-3.5 h-3.5" />}
+                >
+                  Sync Now
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDisconnectGmail}
+                  isLoading={isDisconnecting}
+                  className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                >
+                  Disconnect
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="brand"
+                size="sm"
+                onClick={handleConnectGmail}
+                isLoading={isConnecting}
+                icon={<Plus className="w-3.5 h-3.5" />}
+              >
+                {isRevoked ? 'Reconnect Gmail' : 'Connect Gmail'}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Outlook Account Card (Upcoming) */}
+        <div className="p-4 rounded-xl border border-slate-200/60 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/40 opacity-75 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60">
+              M
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Microsoft 365 / Outlook
+                </span>
+                <Badge variant="outline">Coming Soon</Badge>
+              </div>
+              <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">
+                Exchange Online integration
+              </p>
+            </div>
+          </div>
+          <Button variant="ghost" size="sm" disabled>
+            Notify Me
+          </Button>
+        </div>
       </div>
     </div>
   );

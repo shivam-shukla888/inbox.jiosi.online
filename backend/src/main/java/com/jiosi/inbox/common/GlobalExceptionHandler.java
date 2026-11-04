@@ -59,6 +59,24 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(ex.getMessage(), "UNAUTHORIZED"));
     }
 
+    @ExceptionHandler(com.jiosi.inbox.gmail.GmailAuthRevokedException.class)
+    public ResponseEntity<ErrorResponse> handleGmailAuthRevoked(com.jiosi.inbox.gmail.GmailAuthRevokedException ex) {
+        log.warn("Gmail authorization revoked: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.of(ex.getMessage(), "GMAIL_AUTH_REVOKED"));
+    }
+
+    @ExceptionHandler(com.jiosi.inbox.gmail.GmailApiException.class)
+    public ResponseEntity<ErrorResponse> handleGmailApiException(com.jiosi.inbox.gmail.GmailApiException ex) {
+        log.warn("Gmail API error: {} (Status: {})", ex.getMessage(), ex.getStatusCode());
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode());
+        if (status == null) {
+            status = HttpStatus.BAD_GATEWAY;
+        }
+        return ResponseEntity.status(status)
+                .body(ErrorResponse.of(ex.getMessage(), "GMAIL_API_ERROR"));
+    }
+
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(NoHandlerFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
