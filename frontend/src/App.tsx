@@ -121,11 +121,14 @@ export const App: React.FC = () => {
       else if (p === '/overview') setCurrentView('landing');
 
       const params = new URLSearchParams(window.location.search);
-      const err = params.get('auth_error');
+      const err = params.get('auth_error') || params.get('gmail_error');
       if (err) {
         hasUrlError = true;
         setAuthError(decodeURIComponent(err));
         setAuthState('AUTHENTICATION_ERROR');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (params.get('gmail_connected')) {
+        showToast('Gmail account connected successfully! Read-only sync active.', 'success');
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }

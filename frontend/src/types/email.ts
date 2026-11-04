@@ -71,3 +71,52 @@ export interface ConnectedAccountItem {
   lastSync?: string;
   isPrimary?: boolean;
 }
+
+export interface GmailStatusData {
+  connected: boolean;
+  accountId?: string | null;
+  email?: string | null;
+  provider: string;
+  status: 'CONNECTED' | 'DISCONNECTED' | 'REVOKED' | string;
+  lastSyncAt?: string | null;
+  tokenExpiresAt?: string | null;
+  scope?: string | null;
+}
+
+export interface GmailMessageSummary {
+  id: string;
+  threadId: string;
+  subject: string;
+  senderName: string;
+  senderEmail: string;
+  recipientEmail: string;
+  snippet: string;
+  receivedAt: string;
+  isUnread: boolean;
+  isStarred: boolean;
+  labelIds: string[];
+}
+
+export interface GmailMessagesPageData {
+  messages: GmailMessageSummary[];
+  nextPageToken?: string | null;
+  resultSizeEstimate: number;
+}
+
+export interface GmailMessageDetail {
+  id: string;
+  threadId: string;
+  subject: string;
+  senderName: string;
+  senderEmail: string;
+  recipientEmail: string;
+  cc?: string | null;
+  snippet: string;
+  bodyText: string;
+  bodyHtml: string;
+  receivedAt: string;
+  isUnread: boolean;
+  isStarred: boolean;
+  hasAttachments: boolean;
+  labelIds: string[];
+}

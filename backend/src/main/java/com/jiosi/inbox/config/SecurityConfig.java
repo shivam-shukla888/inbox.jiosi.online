@@ -9,6 +9,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -30,6 +33,7 @@ public class SecurityConfig {
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
     private final UrlBasedCorsConfigurationSource corsConfigurationSource;
+    private final ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider;
     private final ObjectMapper objectMapper;
 
     public SecurityConfig(
@@ -37,12 +41,14 @@ public class SecurityConfig {
             OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
             OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler,
             UrlBasedCorsConfigurationSource corsConfigurationSource,
+            ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider,
             ObjectMapper objectMapper
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
         this.oAuth2AuthenticationFailureHandler = oAuth2AuthenticationFailureHandler;
         this.corsConfigurationSource = corsConfigurationSource;
+        this.clientRegistrationRepositoryProvider = clientRegistrationRepositoryProvider;
         this.objectMapper = objectMapper;
     }
 
@@ -92,10 +98,15 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-                .oauth2Login(oauth2 -> oauth2
-                        .successHandler(oAuth2AuthenticationSuccessHandler)
-                        .failureHandler(oAuth2AuthenticationFailureHandler)
-                )
+                .oauth2Login(oauth2 -> {
+                    clientRegistrationRepositoryProvider.ifAvailable(repo -> {
+                        oauth2.authorizationEndpoint(authEndpoint -> authEndpoint
+                                .authorizationRequestResolver(new CustomOAuth2AuthorizationRequestResolver(repo))
+                        );
+                    });
+                    oauth2.successHandler(oAuth2AuthenticationSuccessHandler);
+                    oauth2.failureHandler(oAuth2AuthenticationFailureHandler);
+                })
                 .logout(logout -> logout
                         .logoutUrl("/api/v1/auth/logout")
                         .invalidateHttpSession(true)

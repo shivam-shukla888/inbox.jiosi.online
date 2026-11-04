@@ -48,6 +48,11 @@ describe('JIOSI Inbox Application Integration Tests', () => {
     vi.spyOn(apiClient, 'initAuth').mockResolvedValue(mockUser);
     vi.spyOn(apiClient, 'fetchCsrf').mockResolvedValue(undefined);
     vi.spyOn(apiClient, 'fetchThreads').mockResolvedValue(createMockPagedData(DEMO_EMAILS));
+    vi.spyOn(apiClient, 'getGmailStatus').mockResolvedValue({
+      success: true,
+      message: 'OK',
+      data: { connected: false, provider: 'GOOGLE_GMAIL', status: 'NOT_CONNECTED' },
+    });
   });
 
   it('renders the complete 3-panel workspace on initial load with real data', async () => {

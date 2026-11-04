@@ -45,6 +45,21 @@ public class ConnectedAccount {
     @Column(name = "last_sync_at")
     private Instant lastSyncAt;
 
+    @Column(name = "access_token_encrypted", columnDefinition = "TEXT")
+    private String accessTokenEncrypted;
+
+    @Column(name = "refresh_token_encrypted", columnDefinition = "TEXT")
+    private String refreshTokenEncrypted;
+
+    @Column(name = "token_expires_at")
+    private Instant tokenExpiresAt;
+
+    @Column(name = "scope", length = 512)
+    private String scope;
+
+    @Column(name = "history_id", length = 64)
+    private String historyId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -82,6 +97,21 @@ public class ConnectedAccount {
 
     public Instant getLastSyncAt() { return lastSyncAt; }
     public void setLastSyncAt(Instant lastSyncAt) { this.lastSyncAt = lastSyncAt; }
+
+    public String getAccessTokenEncrypted() { return accessTokenEncrypted; }
+    public void setAccessTokenEncrypted(String accessTokenEncrypted) { this.accessTokenEncrypted = accessTokenEncrypted; }
+
+    public String getRefreshTokenEncrypted() { return refreshTokenEncrypted; }
+    public void setRefreshTokenEncrypted(String refreshTokenEncrypted) { this.refreshTokenEncrypted = refreshTokenEncrypted; }
+
+    public Instant getTokenExpiresAt() { return tokenExpiresAt; }
+    public void setTokenExpiresAt(Instant tokenExpiresAt) { this.tokenExpiresAt = tokenExpiresAt; }
+
+    public String getScope() { return scope; }
+    public void setScope(String scope) { this.scope = scope; }
+
+    public String getHistoryId() { return historyId; }
+    public void setHistoryId(String historyId) { this.historyId = historyId; }
 
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
