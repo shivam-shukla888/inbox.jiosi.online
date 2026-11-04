@@ -62,7 +62,7 @@ spring:
               - openid
               - profile
               - email
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            redirect-uri: "${GOOGLE_REDIRECT_URI:{baseUrl}/login/oauth2/code/{registrationId}}"
 
 management:
   endpoints:
@@ -85,6 +85,7 @@ logging:
 app:
   version: 0.1.0-alpha
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  backend-url: ${BACKEND_URL:${SERVER_URL:http://localhost:8080}}
   security:
     enabled: ${SECURITY_ENABLED:true}
     jwt-secret: ${JWT_SECRET:jiosi_default_development_hmac_secret_key_minimum_32_bytes_long}

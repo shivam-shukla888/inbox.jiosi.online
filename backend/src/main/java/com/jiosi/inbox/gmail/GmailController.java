@@ -21,14 +21,16 @@ import java.util.UUID;
 public class GmailController {
 
     private final GmailService gmailService;
-    private final String backendBaseUrl;
+    private final String authBaseUrl;
 
     public GmailController(
             GmailService gmailService,
+            @Value("${app.frontend-url:http://localhost:5173}") String frontendUrl,
             @Value("${app.backend-url:${SERVER_URL:http://localhost:8080}}") String backendBaseUrl
     ) {
         this.gmailService = gmailService;
-        this.backendBaseUrl = backendBaseUrl.endsWith("/") ? backendBaseUrl.substring(0, backendBaseUrl.length() - 1) : backendBaseUrl;
+        String base = (frontendUrl != null && frontendUrl.startsWith("https://")) ? frontendUrl : backendBaseUrl;
+        this.authBaseUrl = base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
     }
 
     @GetMapping("/connect-url")
@@ -36,7 +38,7 @@ public class GmailController {
             @RequestHeader(value = "X-Workspace-Id", required = false) UUID workspaceId
     ) {
         User user = resolveCurrentUser();
-        String url = backendBaseUrl + "/oauth2/authorization/google?action=connect_gmail&user_id=" + user.getId();
+        String url = authBaseUrl + "/oauth2/authorization/google?action=connect_gmail&user_id=" + user.getId();
         if (workspaceId != null) {
             url += "&workspace_id=" + workspaceId;
         }
