@@ -1,7 +1,9 @@
 package com.jiosi.inbox.security;
 
+import com.jiosi.inbox.common.UnauthorizedException;
 import com.jiosi.inbox.common.WorkspaceAccessDeniedException;
 import com.jiosi.inbox.config.CustomOAuth2AuthorizationRequestResolver;
+import com.jiosi.inbox.connectedaccount.ConnectedAccount;
 import com.jiosi.inbox.connectedaccount.ConnectedAccountRepository;
 import com.jiosi.inbox.gmail.GmailController;
 import com.jiosi.inbox.user.User;
@@ -12,6 +14,7 @@ import com.jiosi.inbox.workspace.WorkspaceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
@@ -19,15 +22,18 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
+import java.time.Instant;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -428,5 +434,142 @@ class OAuth2RedirectUriTests {
         assertNotNull(redirectUrl);
         assertTrue(redirectUrl.startsWith("https://inbox.jiosi.online/?auth_error="));
         assertFalse(redirectUrl.contains("jiosi-inbox-api.onrender.com"));
+    }
+
+    @Test
+    @DisplayName("GmailController: Missing workspace ID returns 400 Bad Request")
+    void testGmailController_MissingWorkspaceId_ReturnsBadRequest() {
+        User testUser = new User("user@jiosi.online", "Test User", null);
+        testUser.setId(UUID.randomUUID());
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(testUser, null, List.of(new SimpleGrantedAuthority("ROLE_USER")))
+        );
+
+        GmailController controller = new GmailController(
+                null,
+                null,
+                "https://inbox.jiosi.online",
+                "http://localhost:8080"
+        );
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        var response = controller.getConnectUrl(null, request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertFalse(response.getBody().success());
+        assertTrue(response.getBody().message().contains("Workspace ID is required"));
+    }
+
+    @Test
+    @DisplayName("GmailController: Unauthenticated request throws UnauthorizedException")
+    void testGmailController_Unauthenticated_ThrowsUnauthorizedException() {
+        SecurityContextHolder.clearContext();
+        UserContext.clear();
+
+        GmailController controller = new GmailController(
+                null,
+                null,
+                "https://inbox.jiosi.online",
+                "http://localhost:8080"
+        );
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        assertThrows(UnauthorizedException.class, () ->
+                controller.getConnectUrl(UUID.randomUUID(), request));
+    }
+
+    @Test
+    @DisplayName("OAuth2 Success Handler: Repeated connection updates existing connected account without duplication")
+    void testOAuth2SuccessHandler_RepeatedConnection_UpdatesExistingAccountWithoutDuplication() throws Exception {
+        UserRepository mockUserRepo = mock(UserRepository.class);
+        ConnectedAccountRepository mockConnectedAccountRepo = mock(ConnectedAccountRepository.class);
+        OAuth2AuthorizedClientService mockClientService = mock(OAuth2AuthorizedClientService.class);
+        TokenEncryptionService realEncryptionService = new TokenEncryptionService("01234567890123456789012345678901");
+
+        UUID userId = UUID.randomUUID();
+        UUID wsId = UUID.randomUUID();
+        User user = new User("test@jiosi.online", "Test User", null);
+        user.setId(userId);
+
+        Workspace ws = new Workspace("Work WS", "desc", user);
+        ws.setId(wsId);
+
+        UserProvisioningService stubUps = new UserProvisioningService(null, null, null) {
+            @Override
+            public User linkOrCreateGoogleUser(GoogleIdentity identity) {
+                return user;
+            }
+        };
+
+        WorkspaceAuthorizationService stubAuthService = new WorkspaceAuthorizationService(null, null) {
+            @Override
+            public WorkspaceMemberAccess validateAccess(UUID workspaceId, User targetUser) {
+                return new WorkspaceMemberAccess(ws, targetUser, "OWNER");
+            }
+        };
+
+        when(mockUserRepo.findById(userId)).thenReturn(Optional.of(user));
+
+        // Existing connected account
+        ConnectedAccount existingAccount = new ConnectedAccount(user, "gmail", "test@jiosi.online", "CONNECTED");
+        when(mockConnectedAccountRepo.findByUserIdAndProviderAndEmailAddress(userId, "gmail", "test@jiosi.online"))
+                .thenReturn(Optional.of(existingAccount));
+
+        OAuth2AccessToken accessToken = new OAuth2AccessToken(
+                OAuth2AccessToken.TokenType.BEARER,
+                "mock-access-token",
+                Instant.now(),
+                Instant.now().plusSeconds(3600),
+                Set.of(CustomOAuth2AuthorizationRequestResolver.GMAIL_READONLY_SCOPE)
+        );
+
+        OAuth2AuthorizedClient mockClient = new OAuth2AuthorizedClient(
+                registrationRepository.findByRegistrationId("google"),
+                "google-sub-123",
+                accessToken
+        );
+        when(mockClientService.loadAuthorizedClient(eq("google"), anyString())).thenReturn(mockClient);
+
+        OAuth2AuthenticationSuccessHandler handler = new OAuth2AuthenticationSuccessHandler(
+                stubUps,
+                mockUserRepo,
+                mockClientService,
+                mockConnectedAccountRepo,
+                realEncryptionService,
+                mock(WorkspaceRepository.class),
+                mock(WorkspaceMemberRepository.class),
+                stubAuthService,
+                "https://inbox.jiosi.online"
+        );
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_GMAIL_CONNECT_ACTION, Boolean.TRUE);
+        session.setAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_USER_ID, userId.toString());
+        session.setAttribute(CustomOAuth2AuthorizationRequestResolver.SESSION_CONNECTING_WORKSPACE_ID, wsId.toString());
+        request.setSession(session);
+
+        OAuth2User oauthUser = mock(OAuth2User.class);
+        when(oauthUser.getName()).thenReturn("google-sub-123");
+        when(oauthUser.getAttributes()).thenReturn(Map.of("email", "test@jiosi.online", "email_verified", true));
+
+        OAuth2AuthenticationToken authToken = new OAuth2AuthenticationToken(
+                oauthUser,
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                "google"
+        );
+
+        handler.onAuthenticationSuccess(request, response, authToken);
+
+        assertEquals(302, response.getStatus());
+        assertTrue(response.getRedirectedUrl().contains("gmail_connected=true"));
+
+        // Verify connectedAccountRepository.save() was called with the existing account instance (updated, not duplicated)
+        verify(mockConnectedAccountRepo).save(same(existingAccount));
+        assertEquals("CONNECTED", existingAccount.getStatus());
+        assertNotNull(existingAccount.getAccessTokenEncrypted());
     }
 }
