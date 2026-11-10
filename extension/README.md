@@ -61,3 +61,4 @@ The JIOSI Action Assistant is a Manifest V3 Chrome Extension side panel designed
 ## 4. Mobile Note
 
 Manifest V3 Side Panels are designed for desktop Chrome browsers. For future mobile Gmail workflow support, a Google Workspace Add-on (Apps Script / Cloud Run) is identified as the viable roadmap path.
+

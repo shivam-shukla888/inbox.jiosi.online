@@ -12,3 +12,4 @@ public interface UserBusinessProfileRepository extends JpaRepository<UserBusines
 
     Optional<UserBusinessProfile> findByUserIdAndWorkspaceId(UUID userId, UUID workspaceId);
 }
+

@@ -34,3 +34,4 @@ public interface EmailCommitmentRepository extends JpaRepository<EmailCommitment
             @Param("statuses") List<String> statuses
     );
 }
+

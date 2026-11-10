@@ -15,3 +15,4 @@ public record DailyBriefResponse(
         List<DailyBriefItemDto> possibleSpamOrSuspicious,
         boolean hasHighConfidenceItems
 ) {}
+

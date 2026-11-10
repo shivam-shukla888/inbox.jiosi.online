@@ -14,3 +14,4 @@ public interface DailyBriefCacheRepository extends JpaRepository<DailyBriefCache
 
     void deleteByWorkspaceIdAndBriefDate(UUID workspaceId, String briefDate);
 }
+

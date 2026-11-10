@@ -67,3 +67,4 @@ public class DailyBriefCache {
     public Instant getGeneratedAt() { return generatedAt; }
     public void setGeneratedAt(Instant generatedAt) { this.generatedAt = generatedAt; }
 }
+

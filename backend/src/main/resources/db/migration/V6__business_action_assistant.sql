@@ -61,3 +61,4 @@ CREATE TABLE IF NOT EXISTS daily_brief_cache (
 );
 
 CREATE INDEX IF NOT EXISTS idx_daily_brief_cache_ws ON daily_brief_cache(workspace_id);
+

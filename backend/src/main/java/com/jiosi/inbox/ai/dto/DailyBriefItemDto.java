@@ -17,3 +17,4 @@ public record DailyBriefItemDto(
         String whoOwesNext, // "user", "other", "none"
         String lastMessageAt
 ) {}
+

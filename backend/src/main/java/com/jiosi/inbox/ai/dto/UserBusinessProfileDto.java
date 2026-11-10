@@ -16,3 +16,4 @@ public record UserBusinessProfileDto(
         String dailyBriefTime,
         String summaryLanguage
 ) {}
+

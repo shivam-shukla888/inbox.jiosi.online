@@ -155,3 +155,4 @@ class BusinessProfileServiceTests {
         assertThat(service.isInQuietHours(profile, dayTime)).isFalse();
     }
 }
+

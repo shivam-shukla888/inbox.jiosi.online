@@ -19,3 +19,4 @@ public record EmailCommitmentDto(
         double confidence,
         String createdAt
 ) {}
+
