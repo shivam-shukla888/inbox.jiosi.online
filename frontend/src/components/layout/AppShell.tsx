@@ -38,7 +38,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           <div className="flex flex-1 min-h-0 overflow-hidden pb-16 lg:pb-0 bg-[#F8FAFC]">
             {/* Center: Email Thread List */}
             <div
-              className={`w-full md:w-[380px] lg:w-[420px] shrink-0 h-full border-r border-slate-200 bg-white overflow-hidden shadow-2xs ${
+              className={`w-full md:w-[380px] lg:w-[420px] xl:w-[440px] shrink-0 h-full border-r border-slate-200 bg-white overflow-hidden shadow-2xs ${
                 isMobileDetailOpen ? 'hidden md:block' : 'block'
               }`}
             >

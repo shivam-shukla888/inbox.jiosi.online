@@ -137,8 +137,8 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
         {/* Form Fields */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           {/* To field */}
-          <div className="border-b border-slate-100 px-5 py-2.5 flex items-center gap-2">
-            <span className="text-xs font-mono text-slate-400 w-12">To:</span>
+          <div className="border-b border-slate-100 px-5 py-2.5 flex items-center gap-3">
+            <span className="text-xs font-mono text-slate-400 w-16 shrink-0">To:</span>
             <input
               type="text"
               value={to}
@@ -162,8 +162,8 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
           {/* Optional CC/BCC */}
           {showCcBcc && (
             <>
-              <div className="border-b border-slate-100 px-5 py-2 flex items-center gap-2 bg-slate-50/40">
-                <span className="text-xs font-mono text-slate-400 w-12">Cc:</span>
+              <div className="border-b border-slate-100 px-5 py-2 flex items-center gap-3 bg-slate-50/40">
+                <span className="text-xs font-mono text-slate-400 w-16 shrink-0">Cc:</span>
                 <input
                   type="text"
                   value={cc}
@@ -172,8 +172,8 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                   className="flex-1 bg-transparent text-slate-900 placeholder:text-slate-400 text-xs focus:outline-none font-sans"
                 />
               </div>
-              <div className="border-b border-slate-100 px-5 py-2 flex items-center gap-2 bg-slate-50/40">
-                <span className="text-xs font-mono text-slate-400 w-12">Bcc:</span>
+              <div className="border-b border-slate-100 px-5 py-2 flex items-center gap-3 bg-slate-50/40">
+                <span className="text-xs font-mono text-slate-400 w-16 shrink-0">Bcc:</span>
                 <input
                   type="text"
                   value={bcc}
@@ -186,8 +186,8 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
           )}
 
           {/* Subject field */}
-          <div className="border-b border-slate-100 px-5 py-2.5 flex items-center gap-2">
-            <span className="text-xs font-mono text-slate-400 w-12">Subject:</span>
+          <div className="border-b border-slate-100 px-5 py-2.5 flex items-center gap-3">
+            <span className="text-xs font-mono text-slate-400 w-16 shrink-0">Subject:</span>
             <input
               type="text"
               value={subject}

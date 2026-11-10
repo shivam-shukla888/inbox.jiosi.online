@@ -132,6 +132,11 @@ export const App: React.FC = () => {
         showToast('Gmail account connected successfully! Starting initial sync...', 'info');
         window.history.replaceState({}, document.title, window.location.pathname);
         setShouldInitialSync(true);
+      } else if (params.get('demo') === 'true') {
+        setEmails(DEMO_EMAILS);
+        setIsDemoMode(true);
+        setAuthState('AUTHENTICATED');
+        showToast('Simulation preview active', 'info');
       }
     }
 

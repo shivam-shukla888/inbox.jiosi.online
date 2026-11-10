@@ -11,6 +11,32 @@ interface EmailListItemProps {
   onToggleStar?: (e: React.MouseEvent) => void;
 }
 
+const AVATAR_GRADIENTS = [
+  'from-indigo-500 to-violet-600 text-white',
+  'from-blue-500 to-indigo-600 text-white',
+  'from-violet-500 to-purple-600 text-white',
+  'from-emerald-500 to-teal-600 text-white',
+  'from-amber-500 to-orange-600 text-white',
+  'from-rose-500 to-pink-600 text-white',
+  'from-sky-500 to-blue-600 text-white',
+];
+
+function getAvatarStyle(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % AVATAR_GRADIENTS.length;
+  return AVATAR_GRADIENTS[index];
+}
+
+function getInitials(name: string): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 export const EmailListItem: React.FC<EmailListItemProps> = ({
   email,
   isSelected,
@@ -19,12 +45,22 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
   onToggleCheck,
   onToggleStar,
 }) => {
+  const displayName = email.isDraft
+    ? `Draft: ${email.recipient.email}`
+    : email.isSent
+    ? `To: ${email.recipient.name}`
+    : email.sender.name;
+
+  const initials = email.sender.avatar && email.sender.avatar.length <= 3
+    ? email.sender.avatar
+    : getInitials(email.sender.name || email.sender.email);
+
   return (
     <div
       onClick={onSelect}
       className={`group relative flex items-start gap-3 px-4 py-3.5 border-b border-slate-100 cursor-pointer transition-all select-none ${
         isSelected
-          ? 'bg-jiosi-selected border-l-[3px] border-l-jiosi-indigo pl-[13px]'
+          ? 'bg-indigo-50/70 border-l-[3px] border-l-jiosi-indigo pl-[13px] shadow-2xs'
           : 'bg-white hover:bg-slate-50/90'
       }`}
     >
@@ -58,6 +94,17 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
         )}
       </div>
 
+      {/* Sender Avatar */}
+      <div className="shrink-0 pt-0.5">
+        <div
+          className={`w-8 h-8 rounded-full bg-gradient-to-tr ${getAvatarStyle(
+            displayName
+          )} flex items-center justify-center font-ui font-semibold text-[11px] shadow-2xs select-none`}
+        >
+          {initials}
+        </div>
+      </div>
+
       {/* Row Content */}
       <div className="flex-1 min-w-0">
         {/* Top: Sender, Star & Time */}
@@ -70,7 +117,7 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
                   : 'font-medium text-slate-700'
               }`}
             >
-              {email.isDraft ? `Draft: ${email.recipient.email}` : email.isSent ? `To: ${email.recipient.name}` : email.sender.name}
+              {displayName}
             </span>
 
             {/* Star Icon */}
@@ -112,7 +159,7 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
 
         {/* Context Badges */}
         <div className="flex items-center justify-between gap-2 mt-1.5 pt-0.5">
-          <div className="flex items-center gap-1.5 overflow-hidden">
+          <div className="flex items-center gap-1.5 overflow-hidden flex-wrap">
             {email.isNeedsReply && (
               <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
                 Needs Reply
@@ -132,6 +179,15 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
                 Draft · {email.lastEdited}
               </span>
             )}
+
+            {email.tags && email.tags.length > 0 && email.tags.map((tag) => (
+              <span
+                key={tag}
+                className="hidden sm:inline-flex items-center text-[9px] font-mono font-medium text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
 
           {email.attachments && email.attachments.length > 0 && (

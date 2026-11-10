@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { EmailThread, AiTone } from '../../types/email';
 import { Button } from '../ui/Button';
 import { Kbd } from '../ui/Kbd';
-import { EmptyState } from '../ui/EmptyState';
 import {
   Archive,
   Clock,
@@ -17,7 +16,8 @@ import {
   CheckCircle2,
   ListTodo,
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Inbox
 } from 'lucide-react';
 
 interface EmailDetailProps {
@@ -30,6 +30,32 @@ interface EmailDetailProps {
   onSendReply?: (to: string, subject: string, body: string) => void;
   onBackToList?: () => void;
   onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
+}
+
+const AVATAR_GRADIENTS = [
+  'from-indigo-500 to-violet-600 text-white',
+  'from-blue-500 to-indigo-600 text-white',
+  'from-violet-500 to-purple-600 text-white',
+  'from-emerald-500 to-teal-600 text-white',
+  'from-amber-500 to-orange-600 text-white',
+  'from-rose-500 to-pink-600 text-white',
+  'from-sky-500 to-blue-600 text-white',
+];
+
+function getAvatarStyle(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % AVATAR_GRADIENTS.length;
+  return AVATAR_GRADIENTS[index];
+}
+
+function getInitials(name: string): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export const EmailDetail: React.FC<EmailDetailProps> = ({
@@ -58,14 +84,63 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
 
   if (!email) {
     return (
-      <div className="h-full flex items-center justify-center bg-white">
-        <EmptyState
-          title="Select an email to read"
-          description="Choose a message from the thread list or use shortcuts (J/K) to navigate."
-        />
+      <div className="h-full flex flex-col items-center justify-center bg-white p-8 select-none">
+        <div className="max-w-md w-full text-center space-y-6">
+          {/* Subtle Icon Badge */}
+          <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-50 to-violet-100/70 border border-indigo-100 flex items-center justify-center mx-auto text-jiosi-indigo shadow-sm shadow-indigo-100/50">
+            <Inbox className="w-7 h-7 text-jiosi-indigo" />
+          </div>
+
+          <div className="space-y-1.5">
+            <h3 className="text-base font-ui font-semibold text-slate-900 tracking-tight">
+              Select an email to read
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto font-light">
+              Choose a message from the thread list or use shortcuts to navigate smoothly through your conversations.
+            </p>
+          </div>
+
+          {/* Quick Keyboard Shortcuts Cheatsheet Card */}
+          <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 text-left shadow-2xs space-y-2.5">
+            <p className="text-[11px] font-mono font-medium text-slate-400 uppercase tracking-wider">
+              Quick Shortcuts
+            </p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-white border border-slate-100">
+                <span className="text-slate-600 font-medium">Next / Prev</span>
+                <div className="flex gap-1">
+                  <Kbd>J</Kbd>
+                  <Kbd>K</Kbd>
+                </div>
+              </div>
+              <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-white border border-slate-100">
+                <span className="text-slate-600 font-medium">New Email</span>
+                <Kbd>C</Kbd>
+              </div>
+              <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-white border border-slate-100">
+                <span className="text-slate-600 font-medium">Reply</span>
+                <Kbd>R</Kbd>
+              </div>
+              <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-white border border-slate-100">
+                <span className="text-slate-600 font-medium">Archive</span>
+                <Kbd>E</Kbd>
+              </div>
+              <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-white border border-slate-100 col-span-2">
+                <span className="text-slate-600 font-medium">Command Palette</span>
+                <Kbd>⌘K</Kbd>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
+
+  const senderInitials = email.sender.avatar && email.sender.avatar.length <= 3
+    ? email.sender.avatar
+    : getInitials(email.sender.name || email.sender.email);
+
+  const avatarGradient = getAvatarStyle(email.sender.name || email.sender.email);
 
   // Precomputed AI drafts based on tone
   const generateDraftByTone = (tone: AiTone) => {
@@ -275,8 +350,8 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
           {/* Header Metadata */}
           <div className="flex items-start justify-between gap-4 pb-5 border-b border-slate-100">
             <div className="flex items-start gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-jiosi-indigo to-jiosi-violet text-white flex items-center justify-center font-ui font-bold text-xs shrink-0 shadow-sm shadow-indigo-100">
-                {email.sender.avatar || email.sender.name.slice(0, 2).toUpperCase()}
+              <div className={`w-11 h-11 rounded-2xl bg-gradient-to-tr ${avatarGradient} flex items-center justify-center font-ui font-bold text-xs shrink-0 shadow-sm shadow-indigo-100`}>
+                {senderInitials}
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -403,7 +478,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
           )}
 
           {/* Email Body */}
-          <div className="text-sm sm:text-base text-slate-800 leading-relaxed sm:leading-8 whitespace-pre-line font-light">
+          <div className="text-[15px] sm:text-base text-slate-800 leading-relaxed sm:leading-8 whitespace-pre-line font-normal tracking-[0.005em]">
             {email.body}
           </div>
 
