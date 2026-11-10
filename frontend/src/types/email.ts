@@ -61,6 +61,56 @@ export interface EmailThread {
   attachments?: EmailAttachment[];
   aiSummary?: string;
   actionItems?: string[];
+  triage?: ThreadAiTriageData;
+}
+
+export interface ThreadAiTriageData {
+  category: 'primary' | 'transactional' | 'newsletter' | 'promotional' | 'social' | 'suspicious' | 'spam' | 'gmail_spam' | 'unknown' | string;
+  importanceScore: number;
+  importanceReason?: string;
+  urgencyScore: number;
+  urgencyReason?: string;
+  needsReply: boolean;
+  deadline?: string | null;
+  evidence: string[];
+  confidence: number;
+  userOverrideCategory?: string | null;
+}
+
+export interface ThreadSummaryData {
+  gist: string;
+  keyDecisions: string[];
+  openQuestion?: string | null;
+  explicitDeadline?: string | null;
+  suggestedNextAction: string;
+}
+
+export interface ActionItemData {
+  title: string;
+  owner?: string | null;
+  dueDate?: string | null;
+  evidenceQuote?: string | null;
+  confidence: number;
+}
+
+export interface ReplyDraftResponseData {
+  draftText: string;
+  tone: string;
+  language: string;
+}
+
+export interface ComposeAssistResponseData {
+  originalText: string;
+  suggestedText: string;
+  action: string;
+  explanation: string;
+}
+
+export interface UserAiPreferencesData {
+  aiProcessingConsent: boolean;
+  defaultReplyTone: string;
+  defaultReplyLanguage: string;
+  serviceConfigured: boolean;
 }
 
 export interface ConnectedAccountItem {

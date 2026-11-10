@@ -99,10 +99,28 @@ export const PrivacyView: React.FC<PrivacyViewProps> = ({ onBack }) => {
           </div>
         </div>
 
-        {/* Section 5: Retention & Deletion */}
+        {/* Section 5: Groq AI Email Intelligence */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-jiosi-violet" />
+            5. Groq AI Email Intelligence & Processing
+          </h2>
+          <div className="space-y-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            <p>
+              When user-initiated AI features (conversation summarization, action item extraction, triage scoring, and reply drafting) are activated, the authorized text of the selected thread is transmitted over TLS to Groq’s inference servers.
+            </p>
+            <ul className="list-disc list-inside space-y-1 pl-2">
+              <li><strong>Zero Public Model Training</strong>: Customer email text is never utilized to train public, open-source, or third-party foundational language models.</li>
+              <li><strong>Inference Data Retention</strong>: Groq states inference data is not retained by default; limited temporary retention may occur strictly for infrastructure reliability and abuse investigation. For details, refer directly to <a href="https://console.groq.com/docs/your-data" target="_blank" rel="noreferrer" className="text-brand-600 dark:text-brand-400 underline font-mono text-xs">Groq’s Customer Data Policy</a>.</li>
+              <li><strong>User Consent & Opt-Out</strong>: Groq AI processing is strictly governed by user consent. You may disable AI processing at any time under <em>Settings &gt; Privacy &amp; Security &gt; Groq AI Email Intelligence Processing</em>. When disabled, zero message data is transmitted to Groq.</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Section 6: Retention & Deletion */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-            5. Retention, Export & Deletion
+            6. Retention, Export & Deletion
           </h2>
           <div className="space-y-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
             <p>
@@ -114,7 +132,7 @@ export const PrivacyView: React.FC<PrivacyViewProps> = ({ onBack }) => {
           </div>
         </div>
 
-        {/* Section 6: Contact */}
+        {/* Section 7: Contact */}
         <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 space-y-1">
           <p>Product: JIOSI Inbox · Brand Attribution: by Shivsastra · Publisher: Shivsastra · <span className="font-mono text-brand-600 dark:text-brand-400">privacy@jiosi.online</span></p>
         </div>

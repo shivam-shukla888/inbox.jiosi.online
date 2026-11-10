@@ -136,6 +136,40 @@ describe('Inbox View Components', () => {
       expect(screen.getByText('Sarah sent the term sheet and requested a review.')).toBeInTheDocument();
     });
 
+    it('renders triage classification and action items on user toggle', () => {
+      const emailWithTriage = {
+        ...mockEmail,
+        actionItems: ['Review term sheet pro-rata clauses', 'Confirm closing call with Sarah'],
+        triage: {
+          category: 'primary',
+          importanceScore: 85,
+          importanceReason: 'Direct request awaiting reply',
+          urgencyScore: 70,
+          urgencyReason: 'Closing call requested Thursday',
+          needsReply: true,
+          evidence: ['Please review by Thursday'],
+          confidence: 0.95,
+        },
+      };
+
+      render(
+        <EmailDetail
+          email={emailWithTriage}
+          onArchive={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      );
+
+      expect(screen.getByText('Imp: 85/100')).toBeInTheDocument();
+      expect(screen.getByText('Urg: 70/100')).toBeInTheDocument();
+      expect(screen.getByText('primary')).toBeInTheDocument();
+
+      const actionsBtn = screen.getByRole('button', { name: /action items/i });
+      fireEvent.click(actionsBtn);
+      expect(screen.getByText(/Identified Action Items/)).toBeInTheDocument();
+      expect(screen.getByText('Review term sheet pro-rata clauses')).toBeInTheDocument();
+    });
+
     it('triggers archive action on archive button click', () => {
       const handleArchive = vi.fn();
       render(
@@ -209,6 +243,26 @@ describe('Inbox View Components', () => {
         'Project Update',
         'Everything is on track.'
       );
+    });
+
+    it('provides AI quick assist templates and undo', () => {
+      render(
+        <ComposeModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSend={vi.fn()}
+        />
+      );
+
+      const polishBtn = screen.getByRole('button', { name: /polish/i });
+      fireEvent.click(polishBtn);
+
+      const bodyTextarea = screen.getByPlaceholderText(/type your message here/i) as HTMLTextAreaElement;
+      expect(bodyTextarea.value).toContain('Dear team,');
+
+      const undoBtn = screen.getByRole('button', { name: /undo/i });
+      fireEvent.click(undoBtn);
+      expect(bodyTextarea.value).toBe('');
     });
   });
 

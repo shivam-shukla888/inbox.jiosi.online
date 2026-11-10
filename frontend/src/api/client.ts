@@ -1,5 +1,17 @@
 import { HealthApiResponse } from '../types/health';
-import { EmailThread, GmailStatusData, GmailMessagesPageData, GmailMessageDetail } from '../types/email';
+import {
+  EmailThread,
+  GmailStatusData,
+  GmailMessagesPageData,
+  GmailMessageDetail,
+  ThreadAiTriageData,
+  ThreadSummaryData,
+  ActionItemData,
+  ReplyDraftResponseData,
+  ComposeAssistResponseData,
+  UserAiPreferencesData,
+  AiTone
+} from '../types/email';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:8080');
 export const DEFAULT_WORKSPACE_ID = 'a0000000-0000-0000-0000-000000000001';
@@ -512,6 +524,105 @@ export class ApiClient {
       body: JSON.stringify({ maxResults, pageToken }),
     });
     return this.handleResponse<GmailSyncResponse>(res);
+  }
+
+  // =========================================================================
+  // GROQ AI EMAIL INTELLIGENCE (SERVER-SIDE)
+  // =========================================================================
+
+  async getAiPreferences(): Promise<UserAiPreferencesData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/preferences`, {
+      method: 'GET',
+      headers: this.getHeaders(false, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<UserAiPreferencesData>(res);
+  }
+
+  async updateAiPreferences(
+    aiProcessingConsent: boolean,
+    defaultReplyTone: string = 'professional',
+    defaultReplyLanguage: string = 'match_thread'
+  ): Promise<UserAiPreferencesData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/preferences`, {
+      method: 'PUT',
+      headers: this.getHeaders(true, true),
+      credentials: 'include',
+      body: JSON.stringify({ aiProcessingConsent, defaultReplyTone, defaultReplyLanguage }),
+    });
+    return this.handleResponse<UserAiPreferencesData>(res);
+  }
+
+  async summarizeThread(threadId: string): Promise<ThreadSummaryData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/threads/${encodeURIComponent(threadId)}/summary`, {
+      method: 'POST',
+      headers: this.getHeaders(true, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<ThreadSummaryData>(res);
+  }
+
+  async extractActionItems(threadId: string): Promise<ActionItemData[]> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/threads/${encodeURIComponent(threadId)}/action-items`, {
+      method: 'POST',
+      headers: this.getHeaders(true, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<ActionItemData[]>(res);
+  }
+
+  async generateReplyDraft(
+    threadId: string,
+    tone: AiTone = 'professional',
+    language: string = 'match_thread',
+    customInstructions?: string
+  ): Promise<ReplyDraftResponseData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/threads/${encodeURIComponent(threadId)}/reply-draft`, {
+      method: 'POST',
+      headers: this.getHeaders(true, true),
+      credentials: 'include',
+      body: JSON.stringify({ tone, language, customInstructions }),
+    });
+    return this.handleResponse<ReplyDraftResponseData>(res);
+  }
+
+  async assistCompose(
+    currentText: string,
+    action: string,
+    targetLanguage?: string,
+    instructions?: string
+  ): Promise<ComposeAssistResponseData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/compose/assist`, {
+      method: 'POST',
+      headers: this.getHeaders(true, true),
+      credentials: 'include',
+      body: JSON.stringify({ currentText, action, targetLanguage, instructions }),
+    });
+    return this.handleResponse<ComposeAssistResponseData>(res);
+  }
+
+  async getThreadTriage(threadId: string): Promise<ThreadAiTriageData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/threads/${encodeURIComponent(threadId)}/triage`, {
+      method: 'POST',
+      headers: this.getHeaders(true, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<ThreadAiTriageData>(res);
+  }
+
+  async correctThreadTriage(
+    threadId: string,
+    correctedCategory: string,
+    feedbackNotes?: string,
+    isFalsePositive?: boolean
+  ): Promise<ThreadAiTriageData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/threads/${encodeURIComponent(threadId)}/triage/correction`, {
+      method: 'POST',
+      headers: this.getHeaders(true, true),
+      credentials: 'include',
+      body: JSON.stringify({ correctedCategory, feedbackNotes, isFalsePositive }),
+    });
+    return this.handleResponse<ThreadAiTriageData>(res);
   }
 }
 

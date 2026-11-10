@@ -16,7 +16,7 @@ import { Badge } from '../ui/Badge';
 import { Kbd } from '../ui/Kbd';
 import { ConnectedAccountsView } from './ConnectedAccountsView';
 import { SettingsTab } from '../../types/email';
-import { AuthSessionData } from '../../api/client';
+import { AuthSessionData, apiClient } from '../../api/client';
 
 interface SettingsViewProps {
   initialTab?: SettingsTab;
@@ -54,9 +54,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [desktopPush, setDesktopPush] = useState(true);
   const [soundEffects, setSoundEffects] = useState(false);
 
-  // Privacy
+  // Privacy & AI
   const [zeroRetention, setZeroRetention] = useState(true);
   const [optOutTraining, setOptOutTraining] = useState(true);
+  const [aiConsent, setAiConsent] = useState(true);
+  const [aiLanguage, setAiLanguage] = useState('match_thread');
+
+  // Load preferences from backend on mount
+  React.useEffect(() => {
+    apiClient.getAiPreferences().then((prefs) => {
+      setAiConsent(prefs.aiProcessingConsent);
+      if (prefs.defaultReplyTone) setDefaultTone(prefs.defaultReplyTone as 'professional' | 'friendly' | 'concise');
+      if (prefs.defaultReplyLanguage) setAiLanguage(prefs.defaultReplyLanguage);
+    }).catch(() => {
+      // Offline fallback
+    });
+  }, []);
+
+  const handleToggleAiConsent = async (enabled: boolean) => {
+    setAiConsent(enabled);
+    try {
+      await apiClient.updateAiPreferences(enabled, defaultTone, aiLanguage);
+      onNotify?.(enabled ? 'Groq AI processing enabled.' : 'Groq AI processing disabled. AI features paused.', 'info');
+    } catch {
+      onNotify?.('Failed to update AI preferences on server.', 'error');
+    }
+  };
 
   const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
     { id: 'general', label: 'General', icon: <Settings className="w-4 h-4" /> },
@@ -373,14 +396,47 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-ui font-bold text-slate-900 dark:text-slate-100">
-                  Privacy & Cryptographic Security
+                  Privacy, AI Governance & Cryptographic Security
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-light">
-                  Strict multi-tenant guarantees and zero surveillance commitments.
+                  Strict multi-tenant guarantees, explicit Groq AI consent, and zero surveillance commitments.
                 </p>
               </div>
 
+              {/* Groq AI Consent Card */}
               <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+                <div className="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-jiosi-violet shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-xs font-ui font-semibold text-slate-900 dark:text-slate-100">
+                        Groq AI Email Intelligence Processing
+                      </p>
+                      <p className="text-[11px] text-slate-500 font-light leading-relaxed max-w-xl">
+                        When enabled, selected thread messages are transmitted over TLS to Groq’s high-velocity inference engine for summarization, action item extraction, triage scoring, and draft composition.
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-light">
+                        Provider Policy: Groq states inference data is not retained by default, while limited temporary retention may occur for reliability or abuse investigation.{' '}
+                        <a
+                          href="https://console.groq.com/docs/your-data"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-jiosi-indigo hover:underline font-mono text-[10px]"
+                        >
+                          Review Groq Data Policy ↗
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={aiConsent}
+                    onChange={(e) => handleToggleAiConsent(e.target.checked)}
+                    className="w-4 h-4 text-jiosi-indigo rounded focus:ring-jiosi-indigo cursor-pointer ml-3 mt-1"
+                    aria-label="Toggle Groq AI Processing"
+                  />
+                </div>
+
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />

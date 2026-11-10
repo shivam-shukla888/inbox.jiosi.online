@@ -150,6 +150,16 @@ describe('JIOSI Inbox Application Integration Tests', () => {
     expect(screen.getByText('Google Workspace / Gmail')).toBeInTheDocument();
     expect(screen.getByText('Zero-Token Exposure Architecture:')).toBeInTheDocument();
 
+    // Switch to Privacy & Security tab
+    const privacyTab = screen.getByRole('button', { name: /privacy & security/i });
+    fireEvent.click(privacyTab);
+
+    expect(screen.getByText('Groq AI Email Intelligence Processing')).toBeInTheDocument();
+    expect(screen.getByText('Review Groq Data Policy ↗')).toHaveAttribute(
+      'href',
+      'https://console.groq.com/docs/your-data'
+    );
+
     // Click Back to Inbox
     const backBtn = screen.getByRole('button', { name: /back to inbox/i });
     fireEvent.click(backBtn);

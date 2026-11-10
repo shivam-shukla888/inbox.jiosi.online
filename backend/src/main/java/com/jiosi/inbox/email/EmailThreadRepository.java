@@ -16,6 +16,10 @@ public interface EmailThreadRepository extends JpaRepository<EmailThread, UUID> 
 
     Optional<EmailThread> findByWorkspaceIdAndId(UUID workspaceId, UUID id);
 
+    default Optional<EmailThread> findByIdAndWorkspaceId(UUID id, UUID workspaceId) {
+        return findByWorkspaceIdAndId(workspaceId, id);
+    }
+
     Optional<EmailThread> findByAccountIdAndExternalThreadId(UUID accountId, String externalThreadId);
 
     Optional<EmailThread> findByWorkspaceIdAndExternalThreadId(UUID workspaceId, String externalThreadId);

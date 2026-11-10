@@ -34,3 +34,16 @@ app:
     enabled: true
     jwt-secret: jiosi_test_hmac_secret_key_minimum_32_bytes_long
     jwt-expiration-seconds: 3600
+
+jiosi:
+  ai:
+    groq:
+      api-key: test-groq-api-key
+      base-url: http://localhost:8089/openai/v1
+      model-summary: llama-3.3-70b-versatile
+      model-draft: llama-3.1-8b-instant
+      model-classify: llama-3.3-70b-versatile
+      timeout-seconds: 5
+      max-retries: 1
+      enabled: true
+

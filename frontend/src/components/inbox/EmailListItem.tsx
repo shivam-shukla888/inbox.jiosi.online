@@ -166,6 +166,16 @@ export const EmailListItem: React.FC<EmailListItemProps> = ({
               </span>
             )}
 
+            {email.triage?.category && email.triage.category !== 'primary' && email.triage.category !== 'unknown' && (
+              <span className={`inline-flex items-center text-[9px] font-mono font-medium px-1.5 py-0.5 rounded capitalize ${
+                email.triage.category === 'suspicious' || email.triage.category === 'spam' || email.triage.category === 'gmail_spam'
+                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                  : 'bg-slate-100 text-slate-600 border border-slate-200'
+              }`}>
+                {email.triage.userOverrideCategory || email.triage.category}
+              </span>
+            )}
+
             {email.isSnoozed && email.snoozedUntil && (
               <span className="inline-flex items-center gap-1 text-[10px] font-mono text-slate-600 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200">
                 <Clock className="w-2.5 h-2.5 text-slate-400" />

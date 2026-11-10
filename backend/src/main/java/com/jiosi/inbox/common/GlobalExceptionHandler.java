@@ -77,6 +77,34 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(ex.getMessage(), "GMAIL_API_ERROR"));
     }
 
+    @ExceptionHandler(com.jiosi.inbox.ai.client.GroqClient.GroqRateLimitException.class)
+    public ResponseEntity<ErrorResponse> handleGroqRateLimit(com.jiosi.inbox.ai.client.GroqClient.GroqRateLimitException ex) {
+        log.warn("Groq rate limit: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ErrorResponse.of(ex.getMessage(), "AI_RATE_LIMIT"));
+    }
+
+    @ExceptionHandler(com.jiosi.inbox.ai.client.GroqClient.GroqUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleGroqUnavailable(com.jiosi.inbox.ai.client.GroqClient.GroqUnavailableException ex) {
+        log.warn("Groq service unavailable: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ErrorResponse.of(ex.getMessage(), "AI_SERVICE_UNAVAILABLE"));
+    }
+
+    @ExceptionHandler(com.jiosi.inbox.ai.client.GroqClient.GroqApiException.class)
+    public ResponseEntity<ErrorResponse> handleGroqApiException(com.jiosi.inbox.ai.client.GroqClient.GroqApiException ex) {
+        log.warn("Groq API error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(ErrorResponse.of(ex.getMessage(), "AI_API_ERROR"));
+    }
+
+    @ExceptionHandler(com.jiosi.inbox.ai.service.EmailIntelligenceService.AiConsentRequiredException.class)
+    public ResponseEntity<ErrorResponse> handleAiConsentRequired(com.jiosi.inbox.ai.service.EmailIntelligenceService.AiConsentRequiredException ex) {
+        log.info("AI consent required: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of(ex.getMessage(), "AI_CONSENT_REQUIRED"));
+    }
+
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(NoHandlerFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
