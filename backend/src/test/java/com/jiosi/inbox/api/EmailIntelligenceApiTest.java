@@ -290,5 +290,87 @@ class EmailIntelligenceApiTest {
                 .andExpect(jsonPath("$.data.defaultReplyTone").value("friendly"))
                 .andExpect(jsonPath("$.data.defaultReplyLanguage").value("hi"));
     }
+
+    @Test
+    @DisplayName("GET & PUT /api/v1/ai/profile manages small business workflow profiles")
+    void testBusinessProfileEndpoints() throws Exception {
+        // GET initial profile (defaults to generic)
+        mockMvc.perform(get("/api/v1/ai/profile")
+                        .header("Authorization", authToken)
+                        .header("X-Workspace-Id", workspace.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.profileType").value("generic"))
+                .andExpect(jsonPath("$.data.timezone").value("UTC"));
+
+        // PUT update to freelancer_agency with VIP contacts
+        var updateReq = new com.jiosi.inbox.ai.dto.UserBusinessProfileDto(
+                "freelancer_agency",
+                "Studio Acme",
+                "Asia/Kolkata",
+                "10:00",
+                "19:00",
+                true,
+                "21:00",
+                "09:00",
+                List.of("client@acme.com", "@keypartner.com"),
+                List.of("vendor@supplier.com"),
+                "08:30",
+                "en"
+        );
+
+        mockMvc.perform(put("/api/v1/ai/profile")
+                        .header("Authorization", authToken)
+                        .header("X-Workspace-Id", workspace.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.profileType").value("freelancer_agency"))
+                .andExpect(jsonPath("$.data.businessName").value("Studio Acme"))
+                .andExpect(jsonPath("$.data.timezone").value("Asia/Kolkata"))
+                .andExpect(jsonPath("$.data.vipContacts[0]").value("client@acme.com"));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/ai/daily-brief returns structured daily business brief")
+    void testDailyBriefEndpoint() throws Exception {
+        mockMvc.perform(get("/api/v1/ai/daily-brief")
+                        .header("Authorization", authToken)
+                        .header("X-Workspace-Id", workspace.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.briefDate").isString())
+                .andExpect(jsonPath("$.data.summaryMessage").isString())
+                .andExpect(jsonPath("$.data.needsYouToday").isArray())
+                .andExpect(jsonPath("$.data.waitingOnSomeoneElse").isArray())
+                .andExpect(jsonPath("$.data.promisesYouMade").isArray());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/ai/commitments returns workspace action obligations")
+    void testCommitmentsEndpoint() throws Exception {
+        mockMvc.perform(get("/api/v1/ai/commitments")
+                        .header("Authorization", authToken)
+                        .header("X-Workspace-Id", workspace.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/threads/by-external/{externalThreadId} allows Chrome Extension thread lookup")
+    void testLookupByExternalThreadId() throws Exception {
+        thread.setExternalThreadId("18c54ff99812a");
+        threadRepository.save(thread);
+
+        mockMvc.perform(get("/api/v1/threads/by-external/18c54ff99812a")
+                        .header("Authorization", authToken)
+                        .header("X-Workspace-Id", workspace.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(thread.getId().toString()))
+                .andExpect(jsonPath("$.data.subject").value(thread.getSubject()));
+    }
 }
 

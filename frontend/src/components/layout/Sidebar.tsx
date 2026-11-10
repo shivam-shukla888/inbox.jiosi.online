@@ -14,13 +14,15 @@ import {
   Settings,
   Link2,
   X,
-  ChevronDown
+  ChevronDown,
+  Briefcase
 } from 'lucide-react';
 
 interface SidebarProps {
   currentFolder: EmailFolder;
   onSelectFolder: (folder: EmailFolder) => void;
   onOpenCompose: () => void;
+  onOpenDailyBrief?: () => void;
   onOpenSettings: (tab?: string) => void;
   folderCounts: Record<EmailFolder, { total: number; unread?: number }>;
   isOpenMobile?: boolean;
@@ -33,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentFolder,
   onSelectFolder,
   onOpenCompose,
+  onOpenDailyBrief,
   onOpenSettings,
   folderCounts,
   isOpenMobile = false,
@@ -162,6 +165,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             New Message
           </Button>
+
+          {onOpenDailyBrief && (
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={onOpenDailyBrief}
+              icon={<Briefcase className="w-4 h-4 text-indigo-600" />}
+              className="w-full font-ui text-xs font-semibold text-slate-700 hover:text-indigo-600 border-indigo-100 hover:border-indigo-300 bg-indigo-50/40 hover:bg-indigo-50/80 transition-all"
+            >
+              Daily Business Brief
+            </Button>
+          )}
 
           {/* Clean Navigation Items */}
           <nav className="space-y-1 pt-1" aria-label="Mail folders">

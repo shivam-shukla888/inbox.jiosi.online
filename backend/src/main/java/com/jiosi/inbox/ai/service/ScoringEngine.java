@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -33,6 +35,26 @@ public class ScoringEngine {
             "(?i)\\b(verify\\s+your\\s+password|account\\s+suspended\\s+within\\s+24|click\\s+here\\s+to\\s+claim|crypto\\s+wallet|transfer\\s+funds\\s+immediately|dear\\s+beneficiary|western\\s+union)\\b"
     );
 
+    private static final Pattern FREELANCER_PATTERN = Pattern.compile(
+            "(?i)\\b(proposal|lead|deliverable|client\\s+approval|scope\\s+change|milestone|contract\\s+terms|payment\\s+terms)\\b"
+    );
+
+    private static final Pattern LOCAL_SERVICE_PATTERN = Pattern.compile(
+            "(?i)\\b(booking|appointment|cancellation|reschedule|customer\\s+complaint|supplier\\s+delay)\\b"
+    );
+
+    private static final Pattern RETAIL_ECOMMERCE_PATTERN = Pattern.compile(
+            "(?i)\\b(refund\\s+request|order\\s+delayed|return\\s+request|dispute|chargeback|gateway\\s+failure)\\b"
+    );
+
+    private static final Pattern PROFESSIONAL_SERVICES_PATTERN = Pattern.compile(
+            "(?i)\\b(tax\\s+deadline|compliance|audit|regulatory\\s+filing|contract\\s+review|retainer)\\b"
+    );
+
+    private static final Pattern SMALL_SAAS_PATTERN = Pattern.compile(
+            "(?i)\\b(p0|p1|outage|downtime|churn|renewal|enterprise\\s+deal|data\\s+loss|incident)\\b"
+    );
+
     public record TriageScores(
             String category,
             int importanceScore,
@@ -44,7 +66,7 @@ public class ScoringEngine {
     ) {}
 
     /**
-     * Computes explainable importance and urgency scores along with conservative category suggestion.
+     * Backward-compatible overload for calculateScores without profile context.
      */
     public TriageScores calculateScores(
             EmailThread thread,
@@ -55,6 +77,40 @@ public class ScoringEngine {
             String modelCategorySuggestion,
             boolean hasGmailSpamLabel,
             boolean hasListUnsubscribeHeader,
+            Instant now
+    ) {
+        return calculateScores(
+                thread,
+                messages,
+                userEmail,
+                actionItems,
+                parsedDeadline,
+                modelCategorySuggestion,
+                hasGmailSpamLabel,
+                hasListUnsubscribeHeader,
+                false,
+                "generic",
+                "UTC",
+                now
+        );
+    }
+
+    /**
+     * Computes explainable importance and urgency scores along with conservative category suggestion,
+     * incorporating small-business workflow profile, VIP contact relationship, and business timezone.
+     */
+    public TriageScores calculateScores(
+            EmailThread thread,
+            List<Email> messages,
+            String userEmail,
+            List<ActionItemDto> actionItems,
+            Instant parsedDeadline,
+            String modelCategorySuggestion,
+            boolean hasGmailSpamLabel,
+            boolean hasListUnsubscribeHeader,
+            boolean isVipContact,
+            String profileType,
+            String userTimezone,
             Instant now
     ) {
         if (now == null) {
@@ -92,10 +148,32 @@ public class ScoringEngine {
             importance += 10;
         }
 
+        if (isVipContact) {
+            importance += 30;
+            importanceReasons.add("Sender is in your configured VIP contacts");
+        }
+
         boolean hasHighImpact = HIGH_IMPACT_PATTERN.matcher(fullText).find();
         if (hasHighImpact) {
             importance += 35;
             importanceReasons.add("Contains high-impact operational or financial subject");
+        }
+
+        // Profile-specific importance weighting
+        if (profileType != null && !profileType.equalsIgnoreCase("generic")) {
+            boolean matchesProfile = switch (profileType.toLowerCase(Locale.ROOT)) {
+                case "freelancer_agency" -> FREELANCER_PATTERN.matcher(fullText).find();
+                case "local_service" -> LOCAL_SERVICE_PATTERN.matcher(fullText).find();
+                case "retail_ecommerce" -> RETAIL_ECOMMERCE_PATTERN.matcher(fullText).find();
+                case "professional_services" -> PROFESSIONAL_SERVICES_PATTERN.matcher(fullText).find();
+                case "small_saas" -> SMALL_SAAS_PATTERN.matcher(fullText).find();
+                default -> false;
+            };
+
+            if (matchesProfile) {
+                importance += 20;
+                importanceReasons.add("Matches " + formatProfileName(profileType) + " workflow priorities");
+            }
         }
 
         if (actionItems != null && !actionItems.isEmpty()) {
@@ -140,6 +218,17 @@ public class ScoringEngine {
                 urgency += 15;
                 urgencyReasons.add("Past due deadline");
             }
+
+            // Timezone awareness for today's deadline
+            try {
+                ZoneId zone = (userTimezone != null && !userTimezone.isBlank()) ? ZoneId.of(userTimezone) : ZoneId.of("UTC");
+                ZonedDateTime userNow = now.atZone(zone);
+                ZonedDateTime deadlineLocal = parsedDeadline.atZone(zone);
+                if (userNow.toLocalDate().isEqual(deadlineLocal.toLocalDate()) && !timeRemaining.isNegative()) {
+                    urgency = Math.max(urgency, 60);
+                    urgencyReasons.add("Action due today in your business timezone (" + zone.getId() + ")");
+                }
+            } catch (Exception ignored) {}
         }
 
         if (hasHighImpact && isLatestInbound) {
@@ -235,5 +324,15 @@ public class ScoringEngine {
         }
         return latestMessage.getSenderEmail().equalsIgnoreCase(userEmail.trim());
     }
-}
 
+    private String formatProfileName(String profileType) {
+        return switch (profileType.toLowerCase(Locale.ROOT)) {
+            case "freelancer_agency" -> "Freelancer/Agency";
+            case "local_service" -> "Local Service";
+            case "retail_ecommerce" -> "Retail/E-commerce";
+            case "professional_services" -> "Professional Services";
+            case "small_saas" -> "Small SaaS";
+            default -> "Business";
+        };
+    }
+}

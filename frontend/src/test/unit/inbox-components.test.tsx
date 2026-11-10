@@ -5,7 +5,9 @@ import { EmailFilters } from '../../components/inbox/EmailFilters';
 import { EmailDetail } from '../../components/inbox/EmailDetail';
 import { ComposeModal } from '../../components/inbox/ComposeModal';
 import { CommandPalette } from '../../components/inbox/CommandPalette';
-import { EmailThread } from '../../types/email';
+import { DailyBriefModal } from '../../components/inbox/DailyBriefModal';
+import { apiClient } from '../../api/client';
+import { EmailThread, DailyBriefResponseData } from '../../types/email';
 
 const mockEmail: EmailThread = {
   id: 'thread-test-1',
@@ -286,6 +288,85 @@ describe('Inbox View Components', () => {
       fireEvent.change(searchInput, { target: { value: 'reply' } });
 
       expect(screen.getByText('Go to Needs Reply')).toBeInTheDocument();
+    });
+  });
+
+  describe('DailyBriefModal Component', () => {
+    it('renders the daily brief with section headers and items', async () => {
+      const mockBrief: DailyBriefResponseData = {
+        briefDate: '2026-11-11',
+        generatedAt: '2026-11-11T00:00:00Z',
+        businessProfile: 'freelancer_agency',
+        summaryMessage: 'You have 1 item requiring attention today.',
+        needsYouToday: [
+          {
+            threadId: 'th-1',
+            subject: 'Client Approval Milestone',
+            senderName: 'Sarah Jenkins',
+            senderEmail: 'sarah@client.com',
+            briefReason: 'Deliverable approval due today',
+            explicitDeadline: '5:00 PM',
+            suggestedNextAction: 'Send revised contract',
+            category: 'primary',
+            importanceScore: 85,
+            urgencyScore: 90,
+            whoOwesNext: 'user',
+            lastMessageAt: '2026-11-11T09:00:00Z',
+          },
+        ],
+        waitingOnSomeoneElse: [],
+        promisesYouMade: [],
+        importantNotUrgent: [],
+        newslettersBulk: [],
+        possibleSpamOrSuspicious: [],
+        hasHighConfidenceItems: true,
+      };
+
+      vi.spyOn(apiClient, 'getDailyBrief').mockResolvedValue(mockBrief);
+      const handleSelect = vi.fn();
+
+      render(
+        <DailyBriefModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSelectThread={handleSelect}
+        />
+      );
+
+      expect(await screen.findByText('Daily Business Email Brief')).toBeInTheDocument();
+      expect(screen.getByText('Client Approval Milestone')).toBeInTheDocument();
+      expect(screen.getByText('Deliverable approval due today')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('Client Approval Milestone'));
+      expect(handleSelect).toHaveBeenCalledWith('th-1');
+    });
+
+    it('renders honest empty state when no urgent actions due', async () => {
+      const emptyBrief: DailyBriefResponseData = {
+        briefDate: '2026-11-11',
+        generatedAt: '2026-11-11T00:00:00Z',
+        businessProfile: 'generic',
+        summaryMessage: 'No clear action due today.',
+        needsYouToday: [],
+        waitingOnSomeoneElse: [],
+        promisesYouMade: [],
+        importantNotUrgent: [],
+        newslettersBulk: [],
+        possibleSpamOrSuspicious: [],
+        hasHighConfidenceItems: false,
+      };
+
+      vi.spyOn(apiClient, 'getDailyBrief').mockResolvedValue(emptyBrief);
+
+      render(
+        <DailyBriefModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSelectThread={vi.fn()}
+        />
+      );
+
+      expect(await screen.findByText(/All clear for today!/i)).toBeInTheDocument();
     });
   });
 });

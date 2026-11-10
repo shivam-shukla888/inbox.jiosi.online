@@ -10,6 +10,7 @@ export type AppView = 'mail' | 'settings' | 'connected-accounts' | 'landing' | '
 
 export type SettingsTab =
   | 'general'
+  | 'business-profile'
   | 'accounts'
   | 'notifications'
   | 'appearance'
@@ -111,6 +112,69 @@ export interface UserAiPreferencesData {
   defaultReplyTone: string;
   defaultReplyLanguage: string;
   serviceConfigured: boolean;
+}
+
+export interface UserBusinessProfileData {
+  profileType: string;
+  businessName?: string | null;
+  timezone: string;
+  businessHoursStart: string;
+  businessHoursEnd: string;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+  vipContacts: string[];
+  waitingOnContacts: string[];
+  dailyBriefTime: string;
+  summaryLanguage: string;
+}
+
+export interface EmailCommitmentData {
+  id: string;
+  threadId: string;
+  threadSubject?: string;
+  sourceMessageId?: string;
+  actor: 'user' | 'other' | 'unknown';
+  action: string;
+  target?: string | null;
+  dueDate?: string | null;
+  evidenceQuote?: string | null;
+  status: string;
+  userStatusOverride?: string | null;
+  effectiveStatus: string;
+  auditNote?: string | null;
+  confidence: number;
+  createdAt?: string;
+}
+
+export interface DailyBriefItemData {
+  threadId: string;
+  externalThreadId?: string;
+  subject: string;
+  senderName: string;
+  senderEmail: string;
+  briefReason: string;
+  explicitDeadline?: string | null;
+  suggestedNextAction: string;
+  category: string;
+  importanceScore: number;
+  urgencyScore: number;
+  whoOwesNext: 'user' | 'other' | 'none';
+  lastMessageAt?: string | null;
+}
+
+export interface DailyBriefResponseData {
+  briefDate: string;
+  generatedAt: string;
+  businessProfile: string;
+  summaryMessage: string;
+  needsYouToday: DailyBriefItemData[];
+  waitingOnSomeoneElse: DailyBriefItemData[];
+  promisesYouMade: DailyBriefItemData[];
+  importantNotUrgent: DailyBriefItemData[];
+  newslettersBulk: DailyBriefItemData[];
+  possibleSpamOrSuspicious: DailyBriefItemData[];
+  hasHighConfidenceItems: boolean;
 }
 
 export interface ConnectedAccountItem {

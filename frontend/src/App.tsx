@@ -7,6 +7,7 @@ import { EmailList } from './components/inbox/EmailList';
 import { EmailDetail } from './components/inbox/EmailDetail';
 import { ComposeModal } from './components/inbox/ComposeModal';
 import { CommandPalette } from './components/inbox/CommandPalette';
+import { DailyBriefModal } from './components/inbox/DailyBriefModal';
 import { SettingsView } from './components/settings/SettingsView';
 import { PrivacyView } from './components/public/PrivacyView';
 import { TermsView } from './components/public/TermsView';
@@ -70,6 +71,7 @@ export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('mail');
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('general');
   const [isComposeOpen, setIsComposeOpen] = useState(false);
+  const [isDailyBriefOpen, setIsDailyBriefOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
@@ -810,6 +812,7 @@ export const App: React.FC = () => {
               setIsMobileDetailOpen(false);
             }}
             onOpenCompose={() => setIsComposeOpen(true)}
+            onOpenDailyBrief={() => setIsDailyBriefOpen(true)}
             onOpenSettings={handleOpenSettings}
             folderCounts={folderCounts}
             isOpenMobile={isMobileMenuOpen}
@@ -971,6 +974,17 @@ export const App: React.FC = () => {
         onClose={() => setIsComposeOpen(false)}
         onSend={handleSendEmail}
         onSaveDraft={handleSaveDraft}
+      />
+
+      {/* Screen 2b: Daily Business Email Brief Modal */}
+      <DailyBriefModal
+        isOpen={isDailyBriefOpen}
+        onClose={() => setIsDailyBriefOpen(false)}
+        onSelectThread={(threadId) => {
+          setCurrentView('mail');
+          handleSelectEmail(threadId);
+        }}
+        onNotify={showToast}
       />
 
       {/* Screen 3: Global Command Palette */}

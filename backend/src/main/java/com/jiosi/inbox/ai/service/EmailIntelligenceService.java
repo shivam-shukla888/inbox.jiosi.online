@@ -43,6 +43,7 @@ public class EmailIntelligenceService {
     private final UserAiPreferencesRepository preferencesRepository;
     private final WorkspaceAuthorizationService workspaceAuthService;
     private final ObjectMapper objectMapper;
+    private final BusinessProfileService profileService;
 
     public EmailIntelligenceService(
             GroqClient groqClient,
@@ -57,6 +58,26 @@ public class EmailIntelligenceService {
             WorkspaceAuthorizationService workspaceAuthService,
             ObjectMapper objectMapper
     ) {
+        this(groqClient, groqProperties, promptGuard, evidenceValidator, scoringEngine,
+                threadRepository, emailRepository, triageRepository, preferencesRepository,
+                workspaceAuthService, objectMapper, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public EmailIntelligenceService(
+            GroqClient groqClient,
+            GroqProperties groqProperties,
+            PromptInjectionGuard promptGuard,
+            EvidenceValidator evidenceValidator,
+            ScoringEngine scoringEngine,
+            EmailThreadRepository threadRepository,
+            EmailRepository emailRepository,
+            ThreadAiTriageRepository triageRepository,
+            UserAiPreferencesRepository preferencesRepository,
+            WorkspaceAuthorizationService workspaceAuthService,
+            ObjectMapper objectMapper,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) BusinessProfileService profileService
+    ) {
         this.groqClient = groqClient;
         this.groqProperties = groqProperties;
         this.promptGuard = promptGuard;
@@ -68,6 +89,7 @@ public class EmailIntelligenceService {
         this.preferencesRepository = preferencesRepository;
         this.workspaceAuthService = workspaceAuthService;
         this.objectMapper = objectMapper;
+        this.profileService = profileService;
     }
 
     /**
@@ -358,6 +380,18 @@ public class EmailIntelligenceService {
         boolean hasGmailSpam = thread.getTags() != null && thread.getTags().contains("SPAM");
         boolean hasListUnsubscribe = thread.getSnippet() != null && thread.getSnippet().toLowerCase(Locale.ROOT).contains("unsubscribe");
 
+        boolean isVip = false;
+        String profileType = "generic";
+        String timezone = "UTC";
+        if (profileService != null) {
+            try {
+                com.jiosi.inbox.ai.entity.UserBusinessProfile profile = profileService.getOrCreateProfile(user, workspaceId);
+                isVip = profileService.isVipContact(thread.getSenderEmail(), profile);
+                profileType = profile.getProfileType();
+                timezone = profile.getTimezone();
+            } catch (Exception ignored) {}
+        }
+
         // Run scoring engine
         ScoringEngine.TriageScores scores = scoringEngine.calculateScores(
                 thread,
@@ -368,6 +402,9 @@ public class EmailIntelligenceService {
                 modelCategory,
                 hasGmailSpam,
                 hasListUnsubscribe,
+                isVip,
+                profileType,
+                timezone,
                 Instant.now()
         );
 

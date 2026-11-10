@@ -10,6 +10,9 @@ import {
   ReplyDraftResponseData,
   ComposeAssistResponseData,
   UserAiPreferencesData,
+  UserBusinessProfileData,
+  EmailCommitmentData,
+  DailyBriefResponseData,
   AiTone
 } from '../types/email';
 
@@ -623,6 +626,89 @@ export class ApiClient {
       body: JSON.stringify({ correctedCategory, feedbackNotes, isFalsePositive }),
     });
     return this.handleResponse<ThreadAiTriageData>(res);
+  }
+
+  // =========================================================================
+  // SMALL BUSINESS ACTION ASSISTANT & DAILY BRIEF
+  // =========================================================================
+
+  async getBusinessProfile(): Promise<UserBusinessProfileData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/profile`, {
+      method: 'GET',
+      headers: this.getHeaders(false, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<UserBusinessProfileData>(res);
+  }
+
+  async updateBusinessProfile(data: Partial<UserBusinessProfileData>): Promise<UserBusinessProfileData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/profile`, {
+      method: 'PUT',
+      headers: this.getHeaders(true, true),
+      credentials: 'include',
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<UserBusinessProfileData>(res);
+  }
+
+  async getWorkspaceCommitments(status?: string, actor?: string): Promise<EmailCommitmentData[]> {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (actor) params.append('actor', actor);
+    const query = params.toString() ? `?${params.toString()}` : '';
+
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/commitments${query}`, {
+      method: 'GET',
+      headers: this.getHeaders(false, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<EmailCommitmentData[]>(res);
+  }
+
+  async getThreadCommitments(threadId: string): Promise<EmailCommitmentData[]> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/threads/${encodeURIComponent(threadId)}/commitments`, {
+      method: 'GET',
+      headers: this.getHeaders(false, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<EmailCommitmentData[]>(res);
+  }
+
+  async syncThreadCommitments(threadId: string): Promise<EmailCommitmentData[]> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/threads/${encodeURIComponent(threadId)}/commitments/sync`, {
+      method: 'POST',
+      headers: this.getHeaders(true, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<EmailCommitmentData[]>(res);
+  }
+
+  async updateCommitmentStatus(commitmentId: string, status: string, auditNote?: string): Promise<EmailCommitmentData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/commitments/${encodeURIComponent(commitmentId)}/status`, {
+      method: 'PATCH',
+      headers: this.getHeaders(true, true),
+      credentials: 'include',
+      body: JSON.stringify({ status, auditNote }),
+    });
+    return this.handleResponse<EmailCommitmentData>(res);
+  }
+
+  async getDailyBrief(forceRefresh: boolean = false): Promise<DailyBriefResponseData> {
+    const res = await fetch(`${this.baseUrl}/api/v1/ai/daily-brief?forceRefresh=${forceRefresh}`, {
+      method: 'GET',
+      headers: this.getHeaders(false, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<DailyBriefResponseData>(res);
+  }
+
+  async getThreadByExternalId(externalThreadId: string): Promise<EmailThread> {
+    const res = await fetch(`${this.baseUrl}/api/v1/threads/by-external/${encodeURIComponent(externalThreadId)}`, {
+      method: 'GET',
+      headers: this.getHeaders(false, true),
+      credentials: 'include',
+    });
+    return this.handleResponse<EmailThread>(res);
   }
 }
 

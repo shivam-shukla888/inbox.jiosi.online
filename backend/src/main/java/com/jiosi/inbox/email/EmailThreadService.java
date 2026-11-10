@@ -164,6 +164,14 @@ public class EmailThreadService {
     }
 
     @Transactional(readOnly = true)
+    public ThreadDetailDto getThreadDetailByExternalId(UUID workspaceId, String externalThreadId) {
+        validateWorkspace(workspaceId);
+        EmailThread thread = threadRepository.findByWorkspaceIdAndExternalThreadId(workspaceId, externalThreadId)
+                .orElseThrow(() -> new ResourceNotFoundException("Thread not found for external id: " + externalThreadId));
+        return getThreadDetail(workspaceId, thread.getId());
+    }
+
+    @Transactional(readOnly = true)
     public PagedThreadsResponse searchThreads(UUID workspaceId, String query, int page, int size) {
         validateWorkspace(workspaceId);
         int boundedSize = Math.clamp(size, 1, 100);

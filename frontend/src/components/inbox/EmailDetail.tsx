@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { EmailThread, AiTone, ThreadSummaryData, ActionItemData, ThreadAiTriageData } from '../../types/email';
+import { EmailThread, AiTone, ThreadSummaryData, ActionItemData, ThreadAiTriageData, EmailCommitmentData } from '../../types/email';
 import { Button } from '../ui/Button';
 import { Kbd } from '../ui/Kbd';
 import { apiClient } from '../../api/client';
@@ -115,6 +115,11 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
   const [isTriaging, setIsTriaging] = useState(false);
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
 
+  // Commitments & Obligations state
+  const [showCommitments, setShowCommitments] = useState(false);
+  const [commitments, setCommitments] = useState<EmailCommitmentData[]>([]);
+  const [isLoadingCommitments, setIsLoadingCommitments] = useState(false);
+
   // Snooze dropdown state
   const [isSnoozeMenuOpen, setIsSnoozeMenuOpen] = useState(false);
 
@@ -134,6 +139,8 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
     );
     setSummaryError(null);
     setShowActionItems(false);
+    setShowCommitments(false);
+    setCommitments([]);
     setActionItemsList(
       email?.actionItems && email.actionItems.length > 0
         ? email.actionItems.map((item) => ({
@@ -227,6 +234,43 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
       onNotify?.(msg, 'error');
     } finally {
       setIsSummarizing(false);
+    }
+  };
+
+  // Real backend call: Commitments & Action Obligations
+  const handleToggleCommitments = async () => {
+    if (showCommitments) {
+      setShowCommitments(false);
+      return;
+    }
+    setShowCommitments(true);
+    if (commitments.length > 0) return;
+
+    setIsLoadingCommitments(true);
+    try {
+      const list = await apiClient.getThreadCommitments(email.id);
+      if (list.length === 0) {
+        const synced = await apiClient.syncThreadCommitments(email.id);
+        setCommitments(synced);
+        onNotify?.(`Analyzed ${synced.length} obligations & promises with Groq AI.`, 'info');
+      } else {
+        setCommitments(list);
+      }
+    } catch (err: unknown) {
+      console.warn('Could not load commitments:', err);
+    } finally {
+      setIsLoadingCommitments(false);
+    }
+  };
+
+  const handleToggleCommitmentStatus = async (commitmentId: string, currentStatus: string) => {
+    const nextStatus = currentStatus === 'done' ? 'open' : 'done';
+    try {
+      const updated = await apiClient.updateCommitmentStatus(commitmentId, nextStatus, 'Updated via JIOSI Thread View');
+      setCommitments(prev => prev.map(c => c.id === commitmentId ? updated : c));
+      onNotify?.(`Commitment marked as ${nextStatus}`, 'success');
+    } catch {
+      onNotify?.('Failed to update status', 'error');
     }
   };
 
@@ -617,6 +661,17 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
               >
                 {isLoadingActions ? 'Extracting...' : showActionItems ? 'Hide Actions' : 'Action Items'}
               </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleToggleCommitments}
+                disabled={isLoadingCommitments}
+                icon={<CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />}
+                className="font-ui font-medium text-xs"
+              >
+                {isLoadingCommitments ? 'Syncing...' : showCommitments ? 'Hide Commitments' : 'Commitments'}
+              </Button>
             </div>
           </div>
 
@@ -760,6 +815,96 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                 </ul>
               ) : !isLoadingActions && (
                 <p className="text-xs text-slate-500 italic">No explicit tasks or commitments found in this email.</p>
+              )}
+            </div>
+          )}
+
+          {/* Commitments & Promises Card (Expandable) */}
+          {showCommitments && (
+            <div className="p-4.5 rounded-2xl bg-indigo-50/50 border border-indigo-100 animate-in fade-in space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-indigo-100">
+                <span className="text-xs font-ui font-bold text-indigo-950 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
+                  Small Business Obligations & Promises ({commitments.length})
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={async () => {
+                      setIsLoadingCommitments(true);
+                      try {
+                        const synced = await apiClient.syncThreadCommitments(email.id);
+                        setCommitments(synced);
+                        onNotify?.('Obligations synchronized with Groq', 'info');
+                      } finally {
+                        setIsLoadingCommitments(false);
+                      }
+                    }}
+                    disabled={isLoadingCommitments}
+                    icon={<RotateCcw className={`w-3 h-3 ${isLoadingCommitments ? 'animate-spin' : ''}`} />}
+                  >
+                    Sync
+                  </Button>
+                  <button
+                    onClick={() => setShowCommitments(false)}
+                    className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                    aria-label="Close commitments"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {isLoadingCommitments && (
+                <p className="text-xs text-slate-500 animate-pulse font-light">
+                  Extracting and verifying promises and obligations with Groq AI...
+                </p>
+              )}
+
+              {commitments.length > 0 ? (
+                <ul className="space-y-2 text-xs text-slate-700 font-light">
+                  {commitments.map((c) => {
+                    const isDone = c.effectiveStatus === 'done';
+                    const actorLabel = c.actor === 'user' ? 'You Promised' : (c.actor === 'other' ? 'Counterpart Promised' : 'Obligation');
+                    const actorBg = c.actor === 'user' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 'bg-amber-100 text-amber-800 border-amber-200';
+
+                    return (
+                      <li key={c.id} className="p-2.5 rounded-xl bg-white border border-indigo-100/80 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${actorBg}`}>
+                              {actorLabel}
+                            </span>
+                            <span className={`font-medium ${isDone ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                              {c.action}
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => handleToggleCommitmentStatus(c.id, c.effectiveStatus)}
+                            className={isDone ? 'text-slate-400 hover:text-slate-600' : 'text-indigo-600 hover:text-indigo-700'}
+                          >
+                            {isDone ? 'Reopen' : '✓ Mark Done'}
+                          </Button>
+                        </div>
+                        {c.dueDate && (
+                          <p className="text-[11px] text-red-600 font-medium pl-1">
+                            Due: {new Date(c.dueDate).toLocaleDateString()}
+                          </p>
+                        )}
+                        {c.evidenceQuote && (
+                          <p className="text-[10px] font-mono text-slate-400 pl-1 italic border-l-2 border-slate-200 ml-1">
+                            "{c.evidenceQuote}"
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : !isLoadingCommitments && (
+                <p className="text-xs text-slate-500 italic">No explicit promises or business obligations recorded for this thread.</p>
               )}
             </div>
           )}

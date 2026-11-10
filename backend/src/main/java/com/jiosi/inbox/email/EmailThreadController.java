@@ -39,6 +39,15 @@ public class EmailThreadController {
         return ResponseEntity.ok(ApiResponse.ok(response, "Thread retrieved successfully"));
     }
 
+    @GetMapping("/by-external/{externalThreadId}")
+    public ResponseEntity<ApiResponse<ThreadDetailDto>> getThreadByExternalId(
+            @RequestHeader("X-Workspace-Id") UUID workspaceId,
+            @PathVariable("externalThreadId") String externalThreadId
+    ) {
+        ThreadDetailDto response = threadService.getThreadDetailByExternalId(workspaceId, externalThreadId);
+        return ResponseEntity.ok(ApiResponse.ok(response, "Thread retrieved successfully"));
+    }
+
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PagedThreadsResponse>> searchThreads(
             @RequestHeader("X-Workspace-Id") UUID workspaceId,

@@ -8,7 +8,10 @@ import {
   Shield,
   CreditCard,
   ArrowLeft,
-  CheckCircle2
+  CheckCircle2,
+  Briefcase,
+  Clock,
+  Plus
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -60,12 +63,42 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [aiConsent, setAiConsent] = useState(true);
   const [aiLanguage, setAiLanguage] = useState('match_thread');
 
+  // Small Business Profile State
+  const [profileType, setProfileType] = useState('generic');
+  const [businessName, setBusinessName] = useState('');
+  const [userTimezone, setUserTimezone] = useState('UTC');
+  const [bizHoursStart, setBizHoursStart] = useState('09:00');
+  const [bizHoursEnd, setBizHoursEnd] = useState('18:00');
+  const [quietHoursEnabled, setQuietHoursEnabled] = useState(true);
+  const [quietStart, setQuietStart] = useState('20:00');
+  const [quietEnd, setQuietEnd] = useState('08:00');
+  const [vipContacts, setVipContacts] = useState<string[]>([]);
+  const [waitingOnContacts, setWaitingOnContacts] = useState<string[]>([]);
+  const [newVipInput, setNewVipInput] = useState('');
+  const [newWaitingInput, setNewWaitingInput] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
   // Load preferences from backend on mount
   React.useEffect(() => {
     apiClient.getAiPreferences().then((prefs) => {
       setAiConsent(prefs.aiProcessingConsent);
       if (prefs.defaultReplyTone) setDefaultTone(prefs.defaultReplyTone as 'professional' | 'friendly' | 'concise');
       if (prefs.defaultReplyLanguage) setAiLanguage(prefs.defaultReplyLanguage);
+    }).catch(() => {
+      // Offline fallback
+    });
+
+    apiClient.getBusinessProfile().then((p) => {
+      if (p.profileType) setProfileType(p.profileType);
+      if (p.businessName) setBusinessName(p.businessName);
+      if (p.timezone) setUserTimezone(p.timezone);
+      if (p.businessHoursStart) setBizHoursStart(p.businessHoursStart);
+      if (p.businessHoursEnd) setBizHoursEnd(p.businessHoursEnd);
+      setQuietHoursEnabled(p.quietHoursEnabled);
+      if (p.quietHoursStart) setQuietStart(p.quietHoursStart);
+      if (p.quietHoursEnd) setQuietEnd(p.quietHoursEnd);
+      if (p.vipContacts) setVipContacts(p.vipContacts);
+      if (p.waitingOnContacts) setWaitingOnContacts(p.waitingOnContacts);
     }).catch(() => {
       // Offline fallback
     });
@@ -81,8 +114,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
+  const handleSaveBusinessProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    try {
+      await apiClient.updateBusinessProfile({
+        profileType,
+        businessName,
+        timezone: userTimezone,
+        businessHoursStart: bizHoursStart,
+        businessHoursEnd: bizHoursEnd,
+        quietHoursEnabled,
+        quietHoursStart: quietStart,
+        quietHoursEnd: quietEnd,
+        vipContacts,
+        waitingOnContacts,
+      });
+      onNotify?.('Small business profile and prioritization updated.', 'success');
+    } catch {
+      onNotify?.('Failed to save business profile.', 'error');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
     { id: 'general', label: 'General', icon: <Settings className="w-4 h-4" /> },
+    { id: 'business-profile', label: 'Business Profile', icon: <Briefcase className="w-4 h-4" /> },
     { id: 'accounts', label: 'Connected Accounts', icon: <Link2 className="w-4 h-4" /> },
     { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
     { id: 'appearance', label: 'Appearance', icon: <Sun className="w-4 h-4" /> },
@@ -220,6 +278,281 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div className="pt-2">
                   <Button type="submit" variant="brand" size="sm" className="font-ui">
                     Save Changes
+                  </Button>
+                </div>
+              </div>
+            </form>
+          )}
+
+          {activeTab === 'business-profile' && (
+            <form onSubmit={handleSaveBusinessProfile} className="space-y-6">
+              <div>
+                <h2 className="text-base font-ui font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-indigo-600" />
+                  Small Business Workflow Profile
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-light">
+                  Tailor AI triage, importance scoring, and daily brief prioritization to your business model.
+                </p>
+              </div>
+
+              <div className="space-y-5 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+                {/* Profile Type Selector */}
+                <div>
+                  <label className="block text-xs font-ui font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    Industry / Business Workflow Type
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {[
+                      { id: 'generic', title: 'Generic Business', desc: 'Standard business & client email' },
+                      { id: 'freelancer_agency', title: 'Freelancer / Agency', desc: 'Proposals, approvals, invoices, feedback' },
+                      { id: 'local_service', title: 'Local Service / Trades', desc: 'Bookings, cancellations, appointments, suppliers' },
+                      { id: 'retail_ecommerce', title: 'Retail / E-commerce', desc: 'Orders, refunds, disputes, shipment issues' },
+                      { id: 'professional_services', title: 'Professional Services', desc: 'Compliance, tax, legal, document collection' },
+                      { id: 'small_saas', title: 'Small Software / SaaS', desc: 'P0/P1 incidents, churn, renewals, escalations' },
+                    ].map((p) => (
+                      <div
+                        key={p.id}
+                        onClick={() => setProfileType(p.id)}
+                        className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                          profileType === p.id
+                            ? 'border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 shadow-xs'
+                            : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <div className="font-semibold text-xs">{p.title}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{p.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Business Name */}
+                <div>
+                  <label className="block text-xs font-ui font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Business / Brand Name (Optional)
+                  </label>
+                  <Input
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="e.g. Acme Studio or Smith Legal"
+                  />
+                </div>
+
+                {/* Timezone & Business Hours */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-ui font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                      Business Timezone
+                    </label>
+                    <select
+                      value={userTimezone}
+                      onChange={(e) => setUserTimezone(e.target.value)}
+                      className="w-full text-xs font-ui px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                    >
+                      <option value="UTC">UTC</option>
+                      <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                      <option value="America/New_York">America/New_York (EST)</option>
+                      <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+                      <option value="America/Chicago">America/Chicago (CST)</option>
+                      <option value="Europe/London">Europe/London (GMT/BST)</option>
+                      <option value="Europe/Berlin">Europe/Berlin (CET)</option>
+                      <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-ui font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                      Business Hours Start
+                    </label>
+                    <Input
+                      type="time"
+                      value={bizHoursStart}
+                      onChange={(e) => setBizHoursStart(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-ui font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                      Business Hours End
+                    </label>
+                    <Input
+                      type="time"
+                      value={bizHoursEnd}
+                      onChange={(e) => setBizHoursEnd(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Quiet Hours */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-slate-500" /> Quiet Hours (No Urgent Brief Alerts)
+                      </span>
+                      <p className="text-[11px] text-slate-500">Mutes proactive notifications outside your working window.</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={quietHoursEnabled}
+                      onChange={(e) => setQuietHoursEnabled(e.target.checked)}
+                      className="w-4 h-4 text-indigo-600 rounded"
+                    />
+                  </div>
+
+                  {quietHoursEnabled && (
+                    <div className="grid grid-cols-2 gap-3 pl-4">
+                      <div>
+                        <label className="block text-[11px] text-slate-500 mb-1">Quiet Start</label>
+                        <Input
+                          type="time"
+                          value={quietStart}
+                          onChange={(e) => setQuietStart(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-500 mb-1">Quiet End</label>
+                        <Input
+                          type="time"
+                          value={quietEnd}
+                          onChange={(e) => setQuietEnd(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* VIP Contacts */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <label className="block text-xs font-ui font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                    VIP Contacts & Key Client Domains
+                  </label>
+                  <p className="text-[11px] text-slate-500 mb-2">
+                    Emails from these contacts receive automatic +30 importance prioritization.
+                  </p>
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      value={newVipInput}
+                      onChange={(e) => setNewVipInput(e.target.value)}
+                      placeholder="client@acme.com or @bigcorp.com"
+                      className="text-xs"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newVipInput.trim()) {
+                            setVipContacts([...vipContacts, newVipInput.trim()]);
+                            setNewVipInput('');
+                          }
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        if (newVipInput.trim()) {
+                          setVipContacts([...vipContacts, newVipInput.trim()]);
+                          setNewVipInput('');
+                        }
+                      }}
+                      icon={<Plus className="w-3.5 h-3.5" />}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {vipContacts.map((vip, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1.5 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full font-mono"
+                      >
+                        {vip}
+                        <button
+                          type="button"
+                          onClick={() => setVipContacts(vipContacts.filter((_, idx) => idx !== i))}
+                          className="hover:text-red-500"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                    {vipContacts.length === 0 && (
+                      <span className="text-[11px] text-slate-400 italic">No VIP contacts added yet.</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Waiting-on Contacts */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <label className="block text-xs font-ui font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                    Waiting-on Contacts & Key Vendors
+                  </label>
+                  <p className="text-[11px] text-slate-500 mb-2">
+                    Pending threads from these contacts automatically appear in "Waiting on someone else".
+                  </p>
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      value={newWaitingInput}
+                      onChange={(e) => setNewWaitingInput(e.target.value)}
+                      placeholder="vendor@supplier.com or contractor@agency.com"
+                      className="text-xs"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newWaitingInput.trim()) {
+                            setWaitingOnContacts([...waitingOnContacts, newWaitingInput.trim()]);
+                            setNewWaitingInput('');
+                          }
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        if (newWaitingInput.trim()) {
+                          setWaitingOnContacts([...waitingOnContacts, newWaitingInput.trim()]);
+                          setNewWaitingInput('');
+                        }
+                      }}
+                      icon={<Plus className="w-3.5 h-3.5" />}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {waitingOnContacts.map((c, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1.5 text-xs bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full font-mono"
+                      >
+                        {c}
+                        <button
+                          type="button"
+                          onClick={() => setWaitingOnContacts(waitingOnContacts.filter((_, idx) => idx !== i))}
+                          className="hover:text-red-500"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                    {waitingOnContacts.length === 0 && (
+                      <span className="text-[11px] text-slate-400 italic">No contacts added yet.</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Save Button */}
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <Button
+                    type="submit"
+                    variant="brand"
+                    size="sm"
+                    disabled={isSavingProfile}
+                    className="font-ui"
+                  >
+                    {isSavingProfile ? 'Saving...' : 'Save Profile & Prioritization'}
                   </Button>
                 </div>
               </div>

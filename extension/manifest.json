@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "JIOSI Inbox — Small Business Action Assistant",
+  "version": "1.0.0",
+  "description": "Gmail companion side panel providing daily business briefs, urgency & importance triage, commitment tracking, and AI reply drafts.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Open JIOSI Action Assistant"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "http://localhost:8080/*",
+    "https://jiosi-inbox-api.onrender.com/*"
+  ]
+}

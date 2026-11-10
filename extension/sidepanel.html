@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JIOSI Action Assistant</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="header">
+      <div class="header-brand">
+        <div class="brand-logo">J</div>
+        <div class="brand-text">
+          <span class="brand-title">JIOSI Assistant</span>
+          <span class="brand-subtitle" id="profileBadge">Small Business</span>
+        </div>
+      </div>
+      <div class="header-status">
+        <span class="status-dot connected" id="connectionDot" title="Backend connected"></span>
+        <button id="configToggleBtn" class="icon-btn" title="Settings & Connection">⚙</button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" id="tabThread">Current Thread</button>
+      <button class="nav-tab" id="tabBrief">Daily Brief</button>
+      <button class="nav-tab" id="tabCommitments">Tracker</button>
+    </nav>
+
+    <!-- Settings Overlay / Panel -->
+    <section class="panel-section settings-panel hidden" id="settingsPanel">
+      <h3>Companion Configuration</h3>
+      <div class="form-group">
+        <label for="backendUrl">JIOSI Backend API</label>
+        <input type="text" id="backendUrl" value="http://localhost:8080" placeholder="https://jiosi-inbox-api.onrender.com">
+      </div>
+      <div class="form-group">
+        <label for="workspaceId">Workspace ID</label>
+        <input type="text" id="workspaceId" placeholder="Workspace UUID">
+      </div>
+      <div class="form-group">
+        <label for="profileSelect">Business Profile</label>
+        <select id="profileSelect">
+          <option value="generic">Generic Small Business</option>
+          <option value="freelancer_agency">Freelancer / Agency</option>
+          <option value="local_service">Local Service / Trades</option>
+          <option value="retail_ecommerce">Retail / E-commerce</option>
+          <option value="professional_services">Professional Services</option>
+          <option value="small_saas">Small Software / SaaS</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button id="saveConfigBtn" class="btn btn-primary">Save Settings</button>
+        <button id="closeConfigBtn" class="btn btn-secondary">Close</button>
+      </div>
+    </section>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- MAIN CONTENT VIEWS -->
+    <main class="main-content">
+      <!-- 1. CURRENT THREAD VIEW -->
+      <div id="viewThread" class="view-pane active">
+        <!-- Thread Header & Quick Selector -->
+        <div class="thread-selector-bar">
+          <input type="text" id="threadSearchInput" placeholder="Filter threads by subject..." class="search-input">
+          <button id="refreshThreadBtn" class="btn btn-sm btn-secondary" title="Sync with Gmail URL">Detect Gmail</button>
+        </div>
+
+        <div id="threadLoadingSpinner" class="loading-state hidden">
+          <div class="spinner"></div>
+          <p>Analyzing thread context with Groq AI...</p>
+        </div>
+
+        <div id="threadEmptyState" class="empty-state">
+          <div class="empty-icon">✉</div>
+          <h4>No Thread Selected</h4>
+          <p>Open an email in Gmail or select from recent business threads below.</p>
+          <div id="recentThreadsList" class="recent-threads-list"></div>
+        </div>
+
+        <div id="threadContent" class="thread-content hidden">
+          <!-- Subject & Sender Info -->
+          <div class="thread-header-card">
+            <h2 id="threadSubject" class="thread-subject"></h2>
+            <div class="thread-meta">
+              <span id="threadSender" class="thread-sender"></span>
+              <span id="threadDate" class="thread-date"></span>
+            </div>
+            
+            <!-- Badges Row -->
+            <div class="badges-row">
+              <span id="importanceBadge" class="badge badge-importance" title="Explainable importance"></span>
+              <span id="urgencyBadge" class="badge badge-urgency" title="Explainable urgency"></span>
+              <span id="categoryBadge" class="badge badge-category"></span>
+              <span id="whoOwesBadge" class="badge badge-who-owes"></span>
+            </div>
+          </div>
+
+          <!-- AI Takeaways -->
+          <div class="card card-takeaways">
+            <div class="card-header">
+              <span class="card-title">AI Key Takeaways</span>
+            </div>
+            <p id="takeawayGist" class="takeaway-gist"></p>
+            <div id="takeawayDetails" class="takeaway-details">
+              <div class="detail-row" id="rowQuestion">
+                <strong>Open Question:</strong> <span id="takeawayQuestion"></span>
+              </div>
+              <div class="detail-row" id="rowDeadline">
+                <strong>Explicit Deadline:</strong> <span id="takeawayDeadline" class="text-deadline"></span>
+              </div>
+              <div class="detail-row" id="rowNextAction">
+                <strong>Suggested Action:</strong> <span id="takeawayNextAction"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Commitments & Next Steps -->
+          <div class="card card-commitments">
+            <div class="card-header space-between">
+              <span class="card-title">Who Owes Next Step & Promises</span>
+              <button id="syncCommitmentsBtn" class="btn btn-xs btn-outline">Sync</button>
+            </div>
+            <div id="commitmentsList" class="commitments-list">
+              <p class="text-muted">No explicit commitments detected yet.</p>
+            </div>
+          </div>
+
+          <!-- Contextual Reply Draft -->
+          <div class="card card-reply-draft">
+            <div class="card-header space-between">
+              <span class="card-title">Reviewable Reply Draft</span>
+              <div class="draft-controls">
+                <select id="draftTone" class="select-xs">
+                  <option value="professional">Professional</option>
+                  <option value="friendly">Friendly</option>
+                  <option value="concise">Concise</option>
+                </select>
+                <select id="draftLanguage" class="select-xs">
+                  <option value="match_thread">Original</option>
+                  <option value="en">English</option>
+                  <option value="hi">Hindi</option>
+                </select>
+              </div>
+            </div>
+            <button id="generateDraftBtn" class="btn btn-sm btn-primary full-width">Generate Reply Draft</button>
+            <div id="draftResultArea" class="draft-result hidden">
+              <textarea id="draftText" class="draft-textarea" rows="5"></textarea>
+              <div class="draft-actions">
+                <button id="copyDraftBtn" class="btn btn-sm btn-secondary">📋 Copy Draft</button>
+                <span class="draft-hint">Always review before sending in Gmail.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feedback & Triage Correction -->
+          <div class="card card-triage-correction">
+            <div class="card-header">
+              <span class="card-title">Triage Feedback (JIOSI State)</span>
+            </div>
+            <div class="correction-actions">
+              <button id="btnNotSpam" class="btn btn-xs btn-outline">✓ Not Spam</button>
+              <button id="btnMarkSuspicious" class="btn btn-xs btn-outline">⚠ Mark Suspicious</button>
+              <button id="btnMarkImportant" class="btn btn-xs btn-outline">★ Important</button>
+            </div>
+            <small class="feedback-disclaimer">Changes JIOSI prioritization. Never mutates Gmail provider labels without separate explicit approval.</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. DAILY BRIEF VIEW -->
+      <div id="viewBrief" class="view-pane">
+        <div class="brief-toolbar">
+          <div class="brief-date-summary">
+            <h3 id="briefHeading">Daily Business Brief</h3>
+            <p id="briefSummaryText" class="brief-summary"></p>
+          </div>
+          <button id="refreshBriefBtn" class="btn btn-sm btn-secondary">Refresh</button>
+        </div>
+
+        <div id="briefLoading" class="loading-state hidden">
+          <div class="spinner"></div>
+          <p>Compiling personalized daily brief...</p>
+        </div>
+
+        <div id="briefContent" class="brief-content">
+          <!-- Section 1: Needs You Today -->
+          <section class="brief-section" id="sectionNeedsYouToday">
+            <div class="section-title text-danger">🔴 Needs You Today</div>
+            <div class="section-items" id="itemsNeedsYouToday"></div>
+          </section>
+
+          <!-- Section 2: Waiting on Someone Else -->
+          <section class="brief-section" id="sectionWaiting">
+            <div class="section-title text-amber">⏳ Waiting on Someone Else</div>
+            <div class="section-items" id="itemsWaiting"></div>
+          </section>
+
+          <!-- Section 3: Promises You Made -->
+          <section class="brief-section" id="sectionPromises">
+            <div class="section-title text-indigo">🤝 Promises You Made</div>
+            <div class="section-items" id="itemsPromises"></div>
+          </section>
+
+          <!-- Section 4: Important, but Not Urgent -->
+          <section class="brief-section" id="sectionImportant">
+            <div class="section-title text-blue">📌 Important, but Not Urgent</div>
+            <div class="section-items" id="itemsImportant"></div>
+          </section>
+
+          <!-- Section 5: Newsletters / Bulk -->
+          <section class="brief-section" id="sectionNewsletters">
+            <div class="section-title text-muted">📰 Newsletters / Bulk</div>
+            <div class="section-items" id="itemsNewsletters"></div>
+          </section>
+
+          <!-- Section 6: Possible Spam or Suspicious -->
+          <section class="brief-section" id="sectionSpam">
+            <div class="section-title text-muted">🛡 Possible Spam / Suspicious</div>
+            <div class="section-items" id="itemsSpam"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- 3. COMMITMENT TRACKER VIEW -->
+      <div id="viewCommitments" class="view-pane">
+        <div class="tracker-header">
+          <h3>Small Business Action Tracker</h3>
+          <p class="text-muted">Track promises you made and obligations owed to you.</p>
+          <div class="tracker-filter-bar">
+            <button class="filter-chip active" data-actor="all">All</button>
+            <button class="filter-chip" data-actor="user">Promises You Made</button>
+            <button class="filter-chip" data-actor="other">Owed to You</button>
+          </div>
+        </div>
+        <div id="allCommitmentsList" class="all-commitments-list"></div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <a href="https://inbox.jiosi.online" target="_blank" class="footer-link">Open Full JIOSI Inbox ↗</a>
+      <span class="footer-privacy"><a href="https://console.groq.com/docs/your-data" target="_blank">Groq Data Policy</a></span>
+    </footer>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
