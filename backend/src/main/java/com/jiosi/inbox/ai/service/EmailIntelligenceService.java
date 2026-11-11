@@ -94,11 +94,21 @@ public class EmailIntelligenceService {
 
     /**
      * Checks if user has granted AI processing consent.
+     * Enforces strict explicit opt-in: returns false if preferences are missing,
+     * repository is null, or repository access fails.
      */
     public boolean hasUserConsent(User user) {
-        return preferencesRepository.findByUserId(user.getId())
-                .map(UserAiPreferences::isAiProcessingConsent)
-                .orElse(true); // Default true unless user opted out
+        if (user == null || preferencesRepository == null) {
+            return false;
+        }
+        try {
+            return preferencesRepository.findByUserId(user.getId())
+                    .map(UserAiPreferences::isAiProcessingConsent)
+                    .orElse(false); // Strict explicit opt-in: false by default
+        } catch (Exception e) {
+            log.warn("Failed to check user AI consent from repository, failing closed: {}", e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -463,11 +473,21 @@ public class EmailIntelligenceService {
 
     /**
      * Gets user AI preferences and consent status.
+     * Enforces strict explicit opt-in: defaults to false if not found.
      */
     @Transactional(readOnly = true)
     public UserAiPreferencesDto getPreferences(User user) {
-        UserAiPreferences prefs = preferencesRepository.findByUserId(user.getId())
-                .orElseGet(() -> new UserAiPreferences(user.getId(), true, "professional", "match_thread"));
+        if (preferencesRepository == null) {
+            return new UserAiPreferencesDto(false, "professional", "match_thread", groqProperties.isEnabled());
+        }
+        UserAiPreferences prefs;
+        try {
+            prefs = preferencesRepository.findByUserId(user.getId())
+                    .orElseGet(() -> new UserAiPreferences(user.getId(), false, "professional", "match_thread"));
+        } catch (Exception e) {
+            log.warn("Failed to load user preferences from repository, defaulting to explicit false: {}", e.getMessage());
+            return new UserAiPreferencesDto(false, "professional", "match_thread", groqProperties.isEnabled());
+        }
 
         return new UserAiPreferencesDto(
                 prefs.isAiProcessingConsent(),
@@ -504,7 +524,7 @@ public class EmailIntelligenceService {
     }
 
     // Helper methods
-    private void assertUserConsent(User user) {
+    public void assertUserConsent(User user) {
         if (!hasUserConsent(user)) {
             throw new AiConsentRequiredException("AI processing is disabled in your privacy settings. Enable it in Settings > Privacy to use AI features.");
         }

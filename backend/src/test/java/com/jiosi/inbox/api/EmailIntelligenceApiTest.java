@@ -6,6 +6,8 @@ import com.jiosi.inbox.ai.dto.ComposeAssistRequest;
 import com.jiosi.inbox.ai.dto.GroqChatResponse;
 import com.jiosi.inbox.ai.dto.ReplyDraftRequest;
 import com.jiosi.inbox.ai.dto.UserAiPreferencesDto;
+import com.jiosi.inbox.ai.entity.UserAiPreferences;
+import com.jiosi.inbox.ai.repository.UserAiPreferencesRepository;
 import com.jiosi.inbox.email.Email;
 import com.jiosi.inbox.email.EmailRepository;
 import com.jiosi.inbox.email.EmailThread;
@@ -34,6 +36,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -73,6 +76,9 @@ class EmailIntelligenceApiTest {
     @Autowired
     private AuthTokenService authTokenService;
 
+    @Autowired
+    private UserAiPreferencesRepository preferencesRepository;
+
     private User user;
     private Workspace workspace;
     private EmailThread thread;
@@ -81,6 +87,7 @@ class EmailIntelligenceApiTest {
     @BeforeEach
     void setUp() {
         user = userRepository.save(new User("alex-" + UUID.randomUUID() + "@jiosi.online", "Alex Rivera", "AR"));
+        preferencesRepository.save(new UserAiPreferences(user.getId(), true, "professional", "match_thread"));
         workspace = workspaceRepository.save(new Workspace("Engineering WS", "eng-ws-" + UUID.randomUUID(), user));
         workspaceMemberRepository.save(new WorkspaceMember(workspace, user, "OWNER"));
         authToken = "Bearer " + authTokenService.generateToken(user);
@@ -371,6 +378,96 @@ class EmailIntelligenceApiTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value(thread.getId().toString()))
                 .andExpect(jsonPath("$.data.subject").value(thread.getSubject()));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/ai/preferences defaults to false for new users with no preferences record")
+    void testPreferencesDefaultsToFalseForNewUser() throws Exception {
+        User freshUser = userRepository.save(new User("fresh-" + UUID.randomUUID() + "@jiosi.online", "Fresh User", "FU"));
+        String freshToken = "Bearer " + authTokenService.generateToken(freshUser);
+
+        mockMvc.perform(get("/api/v1/ai/preferences")
+                        .header("Authorization", freshToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.aiProcessingConsent").value(false));
+    }
+
+    @Test
+    @DisplayName("AI endpoints reject requests with HTTP 400 AI_CONSENT_REQUIRED when consent is missing")
+    void testAiEndpointsBlockedWhenConsentMissing() throws Exception {
+        User noConsentUser = userRepository.save(new User("noconsent-" + UUID.randomUUID() + "@jiosi.online", "No Consent", "NC"));
+        Workspace noConsentWs = workspaceRepository.save(new Workspace("NC WS", "nc-ws-" + UUID.randomUUID(), noConsentUser));
+        workspaceMemberRepository.save(new WorkspaceMember(noConsentWs, noConsentUser, "OWNER"));
+        String noConsentToken = "Bearer " + authTokenService.generateToken(noConsentUser);
+
+        EmailThread ncThread = new EmailThread();
+        ncThread.setWorkspace(noConsentWs);
+        ncThread.setSubject("Subject");
+        ncThread.setSenderName("Sender");
+        ncThread.setSenderEmail("sender@test.com");
+        ncThread.setRecipientEmail(noConsentUser.getEmail());
+        ncThread = threadRepository.save(ncThread);
+
+        mockMvc.perform(post("/api/v1/ai/threads/" + ncThread.getId() + "/summary")
+                        .header("Authorization", noConsentToken)
+                        .header("X-Workspace-Id", noConsentWs.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("AI_CONSENT_REQUIRED"))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Settings > Privacy")));
+
+        mockMvc.perform(post("/api/v1/ai/threads/" + ncThread.getId() + "/commitments/sync")
+                        .header("Authorization", noConsentToken)
+                        .header("X-Workspace-Id", noConsentWs.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("AI_CONSENT_REQUIRED"));
+
+        verifyNoInteractions(groqClient);
+    }
+
+    @Test
+    @DisplayName("Revoking consent via PUT /api/v1/ai/preferences immediately blocks subsequent AI requests")
+    void testConsentRevocationLifecycleAtApiLevel() throws Exception {
+        // Step 1: User has consent = true in setUp(). Summarize succeeds.
+        String mockJson = """
+                {
+                  "gist": "Planning review summary.",
+                  "keyDecisions": [],
+                  "openQuestion": null,
+                  "explicitDeadline": null,
+                  "suggestedNextAction": "Reply"
+                }
+                """;
+        when(groqClient.chatCompletion(any())).thenReturn(
+                new GroqChatResponse("id-rev", "llama-3.3-70b-versatile",
+                        List.of(new GroqChatResponse.Choice(0, new GroqChatResponse.Message("assistant", mockJson), "stop")), null)
+        );
+
+        mockMvc.perform(post("/api/v1/ai/threads/" + thread.getId() + "/summary")
+                        .header("Authorization", authToken)
+                        .header("X-Workspace-Id", workspace.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        // Step 2: User explicitly revokes consent
+        UserAiPreferencesDto revokeReq = new UserAiPreferencesDto(false, "professional", "match_thread", true);
+        mockMvc.perform(put("/api/v1/ai/preferences")
+                        .header("Authorization", authToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(revokeReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.aiProcessingConsent").value(false));
+
+        // Step 3: Subsequent summarize request must be blocked with 400 AI_CONSENT_REQUIRED
+        mockMvc.perform(post("/api/v1/ai/threads/" + thread.getId() + "/summary")
+                        .header("Authorization", authToken)
+                        .header("X-Workspace-Id", workspace.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("AI_CONSENT_REQUIRED"));
     }
 }
 

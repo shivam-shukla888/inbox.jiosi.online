@@ -24,7 +24,7 @@ public class UserAiPreferences {
     private UUID userId;
 
     @Column(name = "ai_processing_consent", nullable = false)
-    private boolean aiProcessingConsent = true;
+    private boolean aiProcessingConsent = false;
 
     @Column(name = "default_reply_tone", nullable = false, length = 32)
     private String defaultReplyTone = "professional";

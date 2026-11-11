@@ -8,6 +8,7 @@ import com.jiosi.inbox.ai.dto.EmailCommitmentDto;
 import com.jiosi.inbox.ai.dto.GroqChatRequest;
 import com.jiosi.inbox.ai.dto.GroqChatResponse;
 import com.jiosi.inbox.ai.entity.EmailCommitment;
+import com.jiosi.inbox.ai.entity.UserAiPreferences;
 import com.jiosi.inbox.ai.repository.EmailCommitmentRepository;
 import com.jiosi.inbox.ai.service.CommitmentService;
 import com.jiosi.inbox.ai.service.EvidenceValidator;
@@ -120,6 +121,7 @@ class CommitmentServiceTests {
     @Test
     @DisplayName("extractAndSyncCommitments parses, validates quotes, and persists commitments")
     void testExtractAndSyncCommitments() {
+        when(preferencesRepository.findByUserId(testUser.getId())).thenReturn(Optional.of(new UserAiPreferences(testUser.getId(), true, "professional", "match_thread")));
         when(threadRepository.findByIdAndWorkspaceId(threadId, workspaceId)).thenReturn(Optional.of(testThread));
         when(emailRepository.findByThreadIdOrderBySentAtAsc(threadId)).thenReturn(List.of(testEmail));
 
@@ -217,5 +219,55 @@ class CommitmentServiceTests {
         // Verify Groq was NEVER called and no external network request occurred
         verify(groqClient, never()).chatCompletion(any());
         verify(threadRepository, never()).findByIdAndWorkspaceId(any(), any());
+    }
+
+    @Test
+    @DisplayName("extractAndSyncCommitments throws AiConsentRequiredException when preferences record is missing")
+    void testExtractCommitmentsBlockedWhenPreferencesMissing() {
+        when(preferencesRepository.findByUserId(testUser.getId())).thenReturn(Optional.empty());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                service.extractAndSyncCommitments(threadId, workspaceId, testUser)
+        ).isInstanceOf(com.jiosi.inbox.ai.service.EmailIntelligenceService.AiConsentRequiredException.class)
+         .hasMessageContaining("AI processing consent is disabled in your privacy settings");
+
+        verify(groqClient, never()).chatCompletion(any());
+    }
+
+    @Test
+    @DisplayName("extractAndSyncCommitments fails closed when preferencesRepository is null")
+    void testExtractCommitmentsBlockedWhenRepositoryNull() {
+        CommitmentService serviceWithoutRepo = new CommitmentService(
+                groqClient,
+                groqProperties,
+                promptGuard,
+                evidenceValidator,
+                commitmentRepository,
+                threadRepository,
+                emailRepository,
+                workspaceAuthService,
+                objectMapper,
+                null
+        );
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                serviceWithoutRepo.extractAndSyncCommitments(threadId, workspaceId, testUser)
+        ).isInstanceOf(com.jiosi.inbox.ai.service.EmailIntelligenceService.AiConsentRequiredException.class)
+         .hasMessageContaining("AI processing consent cannot be verified");
+
+        verify(groqClient, never()).chatCompletion(any());
+    }
+
+    @Test
+    @DisplayName("extractAndSyncCommitments fails closed when preferencesRepository throws exception")
+    void testExtractCommitmentsBlockedWhenRepositoryThrowsException() {
+        when(preferencesRepository.findByUserId(testUser.getId())).thenThrow(new RuntimeException("Database offline"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                service.extractAndSyncCommitments(threadId, workspaceId, testUser)
+        ).isInstanceOf(com.jiosi.inbox.ai.service.EmailIntelligenceService.AiConsentRequiredException.class)
+         .hasMessageContaining("AI processing consent is disabled in your privacy settings");
+
+        verify(groqClient, never()).chatCompletion(any());
     }
 }

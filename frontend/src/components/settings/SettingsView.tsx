@@ -61,7 +61,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Privacy & AI
   const [zeroRetention, setZeroRetention] = useState(true);
   const [optOutTraining, setOptOutTraining] = useState(true);
-  const [aiConsent, setAiConsent] = useState(true);
+  const [aiConsent, setAiConsent] = useState(false);
   const [aiLanguage, setAiLanguage] = useState('match_thread');
 
   // Small Business Profile State
@@ -821,7 +821,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         Groq AI Email Intelligence Processing
                       </p>
                       <p className="text-[11px] text-slate-500 font-light leading-relaxed max-w-xl">
-                        When enabled, selected thread messages are transmitted over TLS to Groq’s high-velocity inference engine for summarization, action item extraction, triage scoring, and draft composition.
+                        Strict explicit opt-in required (disabled by default). When enabled by you, selected thread messages are transmitted over TLS to Groq’s high-velocity inference engine for summarization, action item extraction, triage scoring, and draft composition. If disabled, all AI requests are blocked at the server boundary with zero network egress.
                       </p>
                       <p className="text-[11px] text-slate-400 font-light">
                         Provider Policy: Groq states inference data is not retained by default, while limited temporary retention may occur for reliability or abuse investigation.{' '}

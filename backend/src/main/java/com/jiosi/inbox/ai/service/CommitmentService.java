@@ -90,17 +90,7 @@ public class CommitmentService {
     @Transactional
     public List<EmailCommitmentDto> extractAndSyncCommitments(UUID threadId, UUID workspaceId, User user) {
         workspaceAuthService.validateAccess(workspaceId, user);
-
-        if (preferencesRepository != null) {
-            boolean hasConsent = preferencesRepository.findByUserId(user.getId())
-                    .map(UserAiPreferences::isAiProcessingConsent)
-                    .orElse(true);
-            if (!hasConsent) {
-                throw new EmailIntelligenceService.AiConsentRequiredException(
-                        "AI processing consent is disabled in your privacy settings. Enable it in Settings > Privacy to extract commitments."
-                );
-            }
-        }
+        assertUserConsent(user);
 
         EmailThread thread = threadRepository.findByIdAndWorkspaceId(threadId, workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Thread not found: " + threadId));
@@ -333,6 +323,28 @@ public class CommitmentService {
             log.warn("Failed to parse commitments JSON from model: {}", e.getMessage());
         }
         return List.of();
+    }
+
+    private void assertUserConsent(User user) {
+        if (user == null || preferencesRepository == null) {
+            throw new EmailIntelligenceService.AiConsentRequiredException(
+                    "AI processing consent cannot be verified because user context or consent repository is unavailable. Enable AI processing in Settings > Privacy."
+            );
+        }
+        boolean hasConsent;
+        try {
+            hasConsent = preferencesRepository.findByUserId(user.getId())
+                    .map(UserAiPreferences::isAiProcessingConsent)
+                    .orElse(false); // Strict explicit opt-in: false by default
+        } catch (Exception e) {
+            log.warn("Failed to verify user AI consent in CommitmentService, failing closed: {}", e.getMessage());
+            hasConsent = false;
+        }
+        if (!hasConsent) {
+            throw new EmailIntelligenceService.AiConsentRequiredException(
+                    "AI processing consent is disabled in your privacy settings. Enable it in Settings > Privacy to extract commitments."
+            );
+        }
     }
 }
 

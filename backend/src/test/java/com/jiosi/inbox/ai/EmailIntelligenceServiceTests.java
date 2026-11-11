@@ -265,7 +265,7 @@ class EmailIntelligenceServiceTests {
     }
 
     @Test
-    @DisplayName("When AI consent is disabled, throws AiConsentRequiredException")
+    @DisplayName("When AI consent is disabled, throws AiConsentRequiredException and never calls Groq")
     void testConsentDisabledThrowsException() {
         UserAiPreferences optOut = new UserAiPreferences(testUser.getId(), false, "professional", "match_thread");
         when(preferencesRepository.findByUserId(testUser.getId())).thenReturn(Optional.of(optOut));
@@ -273,5 +273,127 @@ class EmailIntelligenceServiceTests {
         assertThatThrownBy(() -> service.summarizeThread(threadId, workspaceId, testUser))
                 .isInstanceOf(EmailIntelligenceService.AiConsentRequiredException.class)
                 .hasMessageContaining("AI processing is disabled in your privacy settings");
+
+        verifyNoInteractions(groqClient);
+    }
+
+    @Test
+    @DisplayName("When AI preferences record is missing, defaults to false, throws AiConsentRequiredException, zero Groq calls")
+    void testMissingPreferencesDefaultsToConsentFalse() {
+        when(preferencesRepository.findByUserId(testUser.getId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.summarizeThread(threadId, workspaceId, testUser))
+                .isInstanceOf(EmailIntelligenceService.AiConsentRequiredException.class)
+                .hasMessageContaining("AI processing is disabled in your privacy settings");
+
+        verifyNoInteractions(groqClient);
+    }
+
+    @Test
+    @DisplayName("When preferencesRepository is null, fails closed and never calls Groq")
+    void testNullPreferencesRepositoryFailsClosed() {
+        EmailIntelligenceService serviceWithNullRepo = new EmailIntelligenceService(
+                groqClient,
+                groqProperties,
+                promptGuard,
+                evidenceValidator,
+                scoringEngine,
+                threadRepository,
+                emailRepository,
+                triageRepository,
+                null,
+                workspaceAuthService,
+                objectMapper
+        );
+
+        assertThatThrownBy(() -> serviceWithNullRepo.summarizeThread(threadId, workspaceId, testUser))
+                .isInstanceOf(EmailIntelligenceService.AiConsentRequiredException.class)
+                .hasMessageContaining("AI processing is disabled in your privacy settings");
+
+        verifyNoInteractions(groqClient);
+    }
+
+    @Test
+    @DisplayName("When preferencesRepository throws exception, fails closed and never calls Groq")
+    void testRepositoryExceptionFailsClosed() {
+        when(preferencesRepository.findByUserId(testUser.getId())).thenThrow(new RuntimeException("Database timeout"));
+
+        assertThatThrownBy(() -> service.summarizeThread(threadId, workspaceId, testUser))
+                .isInstanceOf(EmailIntelligenceService.AiConsentRequiredException.class)
+                .hasMessageContaining("AI processing is disabled in your privacy settings");
+
+        verifyNoInteractions(groqClient);
+    }
+
+    @Test
+    @DisplayName("All AI flows (action-items, reply draft, compose assist, triage) are blocked when consent is false")
+    void testAllAiFlowsBlockedWhenConsentDisabled() {
+        UserAiPreferences optOut = new UserAiPreferences(testUser.getId(), false, "professional", "match_thread");
+        when(preferencesRepository.findByUserId(testUser.getId())).thenReturn(Optional.of(optOut));
+
+        assertThatThrownBy(() -> service.extractActionItems(threadId, workspaceId, testUser))
+                .isInstanceOf(EmailIntelligenceService.AiConsentRequiredException.class);
+
+        assertThatThrownBy(() -> service.generateReplyDraft(threadId, workspaceId, testUser, new ReplyDraftRequest("professional", "match_thread", null)))
+                .isInstanceOf(EmailIntelligenceService.AiConsentRequiredException.class);
+
+        assertThatThrownBy(() -> service.assistCompose(new ComposeAssistRequest("Test body", "shorten", "en", null), testUser))
+                .isInstanceOf(EmailIntelligenceService.AiConsentRequiredException.class);
+
+        assertThatThrownBy(() -> service.triageThread(threadId, workspaceId, testUser))
+                .isInstanceOf(EmailIntelligenceService.AiConsentRequiredException.class);
+
+        verifyNoInteractions(groqClient);
+    }
+
+    @Test
+    @DisplayName("Revoking consent blocks subsequent AI calls immediately")
+    void testConsentRevocationLifecycle() {
+        // Step 1: User has consent = true -> request succeeds
+        when(preferencesRepository.findByUserId(testUser.getId()))
+                .thenReturn(Optional.of(new UserAiPreferences(testUser.getId(), true, "professional", "match_thread")));
+        when(threadRepository.findByIdAndWorkspaceId(threadId, workspaceId)).thenReturn(Optional.of(testThread));
+        when(emailRepository.findByThreadIdOrderBySentAtAsc(threadId)).thenReturn(List.of(testEmail));
+
+        String mockJson = """
+                {
+                  "gist": "Test summary",
+                  "keyDecisions": [],
+                  "openQuestion": null,
+                  "explicitDeadline": null,
+                  "suggestedNextAction": "Reply"
+                }
+                """;
+        when(groqClient.chatCompletion(any())).thenReturn(
+                new GroqChatResponse("id-1", "llama-3.3-70b-versatile",
+                        List.of(new GroqChatResponse.Choice(0, new GroqChatResponse.Message("assistant", mockJson), "stop")), null)
+        );
+
+        ThreadSummaryResponse firstSummary = service.summarizeThread(threadId, workspaceId, testUser);
+        assertThat(firstSummary).isNotNull();
+        verify(groqClient, times(1)).chatCompletion(any());
+
+        // Step 2: User revokes consent -> consent is now false
+        when(preferencesRepository.findByUserId(testUser.getId()))
+                .thenReturn(Optional.of(new UserAiPreferences(testUser.getId(), false, "professional", "match_thread")));
+
+        assertThatThrownBy(() -> service.summarizeThread(threadId, workspaceId, testUser))
+                .isInstanceOf(EmailIntelligenceService.AiConsentRequiredException.class);
+
+        // Verify Groq was NOT called again (still exactly 1 total call)
+        verify(groqClient, times(1)).chatCompletion(any());
+    }
+
+    @Test
+    @DisplayName("getPreferences returns aiProcessingConsent = false for brand new users")
+    void testGetPreferencesDefaultsToFalseForNewUser() {
+        when(preferencesRepository.findByUserId(testUser.getId())).thenReturn(Optional.empty());
+
+        UserAiPreferencesDto prefs = service.getPreferences(testUser);
+
+        assertThat(prefs).isNotNull();
+        assertThat(prefs.aiProcessingConsent()).isFalse();
+        assertThat(prefs.defaultReplyTone()).isEqualTo("professional");
+        assertThat(prefs.defaultReplyLanguage()).isEqualTo("match_thread");
     }
 }

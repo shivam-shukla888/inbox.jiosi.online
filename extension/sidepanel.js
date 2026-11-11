@@ -297,6 +297,15 @@
         throw new Error('Access denied to workspace. Please check your Workspace ID in settings.');
       }
 
+      if (!response.ok) {
+        let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const body = await response.json();
+          if (body.message) errorMsg = body.message;
+        } catch (_) {}
+        throw new Error(errorMsg);
+      }
+
       const json = await response.json();
       setConnectionState(true);
       return json.data !== undefined ? json.data : json;
