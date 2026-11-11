@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   Briefcase,
   Clock,
-  Plus
+  Plus,
+  PanelRight
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -285,7 +286,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           )}
 
           {activeTab === 'business-profile' && (
-            <form onSubmit={handleSaveBusinessProfile} className="space-y-6">
+            <div className="space-y-6">
+              <form onSubmit={handleSaveBusinessProfile} className="space-y-6">
               <div>
                 <h2 className="text-base font-ui font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <Briefcase className="w-5 h-5 text-indigo-600" />
@@ -557,9 +559,82 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
               </div>
             </form>
-          )}
 
-          {activeTab === 'accounts' && (
+            {/* Chrome Extension Companion Connection Card */}
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <PanelRight className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <h3 className="text-xs font-ui font-semibold text-slate-900 dark:text-slate-100">
+                    Chrome Side Panel Companion Connection
+                  </h3>
+                </div>
+                <span className="text-[10px] font-mono text-slate-500 bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">
+                  Manifest V3
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-light">
+                Connect the JIOSI Action Assistant inside desktop Gmail. The companion authenticates via Bearer session tokens stored strictly in browser process memory (<code className="text-[10px] font-mono">chrome.storage.session</code>), never in plaintext on disk.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                    Workspace ID
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      readOnly
+                      value={user?.defaultWorkspaceId || 'a0000000-0000-0000-0000-000000000001'}
+                      className="w-full text-xs font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 select-all"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        navigator.clipboard.writeText(user?.defaultWorkspaceId || 'a0000000-0000-0000-0000-000000000001');
+                        onNotify?.('Workspace ID copied to clipboard', 'success');
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                    Session Token (for Companion Side Panel)
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      readOnly
+                      type="password"
+                      value={sessionStorage.getItem('jiosi_auth_token') || 'Active session token'}
+                      className="w-full text-xs font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 select-all"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        const token = sessionStorage.getItem('jiosi_auth_token') || '';
+                        if (token) {
+                          navigator.clipboard.writeText(token);
+                          onNotify?.('Companion session token copied to clipboard', 'success');
+                        } else {
+                          onNotify?.('No active session token found. Please sign in.', 'error');
+                        }
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'accounts' && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-ui font-bold text-slate-900 dark:text-slate-100">

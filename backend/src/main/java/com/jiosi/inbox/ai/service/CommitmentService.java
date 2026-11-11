@@ -9,7 +9,9 @@ import com.jiosi.inbox.ai.dto.EmailCommitmentDto;
 import com.jiosi.inbox.ai.dto.GroqChatRequest;
 import com.jiosi.inbox.ai.dto.GroqChatResponse;
 import com.jiosi.inbox.ai.entity.EmailCommitment;
+import com.jiosi.inbox.ai.entity.UserAiPreferences;
 import com.jiosi.inbox.ai.repository.EmailCommitmentRepository;
+import com.jiosi.inbox.ai.repository.UserAiPreferencesRepository;
 import com.jiosi.inbox.common.ResourceNotFoundException;
 import com.jiosi.inbox.email.Email;
 import com.jiosi.inbox.email.EmailRepository;
@@ -40,6 +42,7 @@ public class CommitmentService {
     private final EmailRepository emailRepository;
     private final WorkspaceAuthorizationService workspaceAuthService;
     private final ObjectMapper objectMapper;
+    private final UserAiPreferencesRepository preferencesRepository;
 
     public CommitmentService(
             GroqClient groqClient,
@@ -52,6 +55,23 @@ public class CommitmentService {
             WorkspaceAuthorizationService workspaceAuthService,
             ObjectMapper objectMapper
     ) {
+        this(groqClient, groqProperties, promptGuard, evidenceValidator, commitmentRepository,
+                threadRepository, emailRepository, workspaceAuthService, objectMapper, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public CommitmentService(
+            GroqClient groqClient,
+            GroqProperties groqProperties,
+            PromptInjectionGuard promptGuard,
+            EvidenceValidator evidenceValidator,
+            EmailCommitmentRepository commitmentRepository,
+            EmailThreadRepository threadRepository,
+            EmailRepository emailRepository,
+            WorkspaceAuthorizationService workspaceAuthService,
+            ObjectMapper objectMapper,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) UserAiPreferencesRepository preferencesRepository
+    ) {
         this.groqClient = groqClient;
         this.groqProperties = groqProperties;
         this.promptGuard = promptGuard;
@@ -61,6 +81,7 @@ public class CommitmentService {
         this.emailRepository = emailRepository;
         this.workspaceAuthService = workspaceAuthService;
         this.objectMapper = objectMapper;
+        this.preferencesRepository = preferencesRepository;
     }
 
     /**
@@ -69,6 +90,18 @@ public class CommitmentService {
     @Transactional
     public List<EmailCommitmentDto> extractAndSyncCommitments(UUID threadId, UUID workspaceId, User user) {
         workspaceAuthService.validateAccess(workspaceId, user);
+
+        if (preferencesRepository != null) {
+            boolean hasConsent = preferencesRepository.findByUserId(user.getId())
+                    .map(UserAiPreferences::isAiProcessingConsent)
+                    .orElse(true);
+            if (!hasConsent) {
+                throw new EmailIntelligenceService.AiConsentRequiredException(
+                        "AI processing consent is disabled in your privacy settings. Enable it in Settings > Privacy to extract commitments."
+                );
+            }
+        }
+
         EmailThread thread = threadRepository.findByIdAndWorkspaceId(threadId, workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Thread not found: " + threadId));
 
@@ -119,7 +152,7 @@ public class CommitmentService {
             // Strict grounding check: evidenceQuote must exist in source email body
             boolean validQuote = evidenceQuote != null && evidenceValidator.isValidEvidence(evidenceQuote, threadContext);
             if (!validQuote && !evidenceValidator.isValidEvidence(action, threadContext)) {
-                log.debug("Discarding ungrounded commitment: {}", action);
+                log.debug("Discarding ungrounded commitment: quote not verified in source text");
                 continue;
             }
 

@@ -38,9 +38,22 @@ The JIOSI Action Assistant is a Manifest V3 Chrome Extension side panel designed
 - **Zero API Keys in Extension:** The extension contains **zero** Groq API keys, OpenAI keys, or Gmail OAuth tokens.
 - **Backend-Only AI Calls:** All Groq AI completions and triage scoring run server-side through Spring Boot.
 - **No DOM Scraping:** The extension extracts the Gmail thread ID from the URL hash and retrieves authorized data via JIOSI's authenticated REST API.
+- **Production API by Default:** Default backend is `https://jiosi-inbox-api.onrender.com`. Localhost `http://localhost:8080` is supported only for local testing.
+- **Strict Backend URL Validation:**
+  - Embedded credentials (`https://user:pass@host`) are explicitly rejected.
+  - HTTPS is strictly required for all remote production hosts. HTTP is permitted exclusively on `localhost` and `127.0.0.1`.
+  - Unsafe schemes (`javascript:`, `file:`, `data:`, `ftp:`) are blocked.
+- **Secure Authentication Flow:**
+  - Tokens are **never** stored in plaintext in persistent disk storage (`chrome.storage.local`).
+  - Session tokens are stored strictly in-memory during the active browser session (`chrome.storage.session`).
+  - Cross-origin requests transmit the session token securely via `Authorization: Bearer <token>`, avoiding third-party cookie blocking and cross-origin SameSite restrictions.
+- **CORS Configuration & Extension Origin:**
+  - Wildcard CORS origins (`*`) with credentials are intentionally forbidden for security.
+  - Production backend restricts CORS to exact configured origins: `https://inbox.jiosi.online`, `http://localhost:5173`, and exact 32-character Chrome extension IDs matching `^[a-p]{32}$`.
+  - In deployment environments (Render), configure `CORS_ALLOWED_EXTENSION_IDS=<32-char-extension-id>` once the extension is registered in the Chrome Web Store or assigned a permanent key.
 - **Narrow Permissions:**
   - `sidePanel`: Needed to open the assistant seamlessly alongside Gmail in the browser.
-  - `storage`: Needed to remember the selected workspace ID, backend API URL, and profile preference locally.
+  - `storage`: Needed to remember the selected workspace ID, backend API URL, and profile preference.
   - `activeTab`: Needed to read the current Gmail URL when the user opens the side panel.
   - `host_permissions`: Strictly restricted to `https://mail.google.com/*` and JIOSI backend endpoints (`https://jiosi-inbox-api.onrender.com/*`, `http://localhost:8080/*`).
 - **OAuth Scope Integrity:** Uses JIOSI's existing `gmail.readonly` scope. It does not broaden OAuth scopes or perform unauthorized label mutations on Google's servers.

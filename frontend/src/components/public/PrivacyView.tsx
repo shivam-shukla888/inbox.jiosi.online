@@ -103,16 +103,28 @@ export const PrivacyView: React.FC<PrivacyViewProps> = ({ onBack }) => {
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-jiosi-violet" />
-            5. Groq AI Email Intelligence & Processing
+            5. Groq AI Email Intelligence & Privacy Controls
           </h2>
           <div className="space-y-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
             <p>
-              When user-initiated AI features (conversation summarization, action item extraction, triage scoring, and reply drafting) are activated, the authorized text of the selected thread is transmitted over TLS to Groq’s inference servers.
+              When user-initiated or configured AI features are activated, sanitized email thread content is transmitted over TLS to Groq Cloud inference infrastructure (<code className="text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">https://api.groq.com/openai/v1</code>).
             </p>
+            <div className="bg-slate-100/70 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
+              <p className="font-semibold text-slate-900 dark:text-white">AI-Powered Features Covered:</p>
+              <ul className="list-disc list-inside space-y-1 pl-1">
+                <li><strong>Thread Summaries & Gist</strong>: Concise 1-sentence summaries, key decisions, and open questions (<code className="font-mono text-[11px]">llama-3.3-70b-versatile</code>).</li>
+                <li><strong>Commitment & Promise Extraction</strong>: Detecting promises made by you or counterparts, validated by exact evidence quotes (<code className="font-mono text-[11px]">llama-3.3-70b-versatile</code>).</li>
+                <li><strong>Triage & Urgency Scoring</strong>: Multi-dimensional urgency/importance scoring and spam/suspicious classification suggestions.</li>
+                <li><strong>Contextual Reply Drafts & Compose Assist</strong>: Reviewable reply drafts with tone and language (English/Hindi) controls (<code className="font-mono text-[11px]">llama-3.1-8b-instant</code>).</li>
+                <li><strong>Daily Business Brief & Chrome Companion</strong>: Action triage presented in the web workspace and Chrome side panel companion.</li>
+              </ul>
+            </div>
+            <p className="font-semibold text-xs text-slate-900 dark:text-white pt-1">Data Transmission & Privacy Safeguards:</p>
             <ul className="list-disc list-inside space-y-1 pl-2">
-              <li><strong>Zero Public Model Training</strong>: Customer email text is never utilized to train public, open-source, or third-party foundational language models.</li>
-              <li><strong>Inference Data Retention</strong>: Groq states inference data is not retained by default; limited temporary retention may occur strictly for infrastructure reliability and abuse investigation. For details, refer directly to <a href="https://console.groq.com/docs/your-data" target="_blank" rel="noreferrer" className="text-brand-600 dark:text-brand-400 underline font-mono text-xs">Groq’s Customer Data Policy</a>.</li>
-              <li><strong>User Consent & Opt-Out</strong>: Groq AI processing is strictly governed by user consent. You may disable AI processing at any time under <em>Settings &gt; Privacy &amp; Security &gt; Groq AI Email Intelligence Processing</em>. When disabled, zero message data is transmitted to Groq.</li>
+              <li><strong>Zero Public Model Training</strong>: Customer email text is never utilized to train, retrain, or fine-tune public, open-source, or third-party foundational models.</li>
+              <li><strong>Zero Credential Transmission</strong>: OAuth tokens, passwords, and private authentication keys are never transmitted to AI providers. Only the active email thread subject and body are evaluated.</li>
+              <li><strong>Inference Data Retention</strong>: Groq states inference data is not retained by default; temporary retention is strictly for operational infrastructure reliability. Refer directly to <a href="https://console.groq.com/docs/your-data" target="_blank" rel="noreferrer" className="text-brand-600 dark:text-brand-400 underline font-mono text-xs">Groq’s Customer Data Policy</a>.</li>
+              <li><strong>Strict User Consent & Instant Opt-Out</strong>: AI processing is governed strictly by user consent. You can disable AI processing at any time in <em>Settings &gt; Privacy &amp; Security &gt; AI Processing Consent</em>. When consent is disabled, the backend rejects AI requests immediately with an <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">AI_CONSENT_REQUIRED</code> error before any HTTP request leaves our servers—guaranteeing that zero email content reaches Groq.</li>
             </ul>
           </div>
         </div>

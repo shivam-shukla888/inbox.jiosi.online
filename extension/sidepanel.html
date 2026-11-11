@@ -35,7 +35,14 @@
       <h3>Companion Configuration</h3>
       <div class="form-group">
         <label for="backendUrl">JIOSI Backend API</label>
-        <input type="text" id="backendUrl" value="http://localhost:8080" placeholder="https://jiosi-inbox-api.onrender.com">
+        <input type="text" id="backendUrl" value="https://jiosi-inbox-api.onrender.com" placeholder="https://jiosi-inbox-api.onrender.com">
+      </div>
+      <div class="form-group">
+        <label for="sessionToken">Extension Session Token</label>
+        <input type="password" id="sessionToken" placeholder="Paste session token from JIOSI Settings...">
+        <p class="form-help-text" style="font-size: 11px; color: #64748b; margin-top: 4px;">
+          Stored in memory during this browser session only (chrome.storage.session); never saved in plaintext on disk.
+        </p>
       </div>
       <div class="form-group">
         <label for="workspaceId">Workspace ID</label>

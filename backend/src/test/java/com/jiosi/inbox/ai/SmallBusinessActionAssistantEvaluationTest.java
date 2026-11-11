@@ -9,6 +9,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -216,8 +218,11 @@ class SmallBusinessActionAssistantEvaluationTest {
         thread.setSnippet("Deliverable is due today.");
         thread.setSenderEmail("lead@company.com");
 
-        Instant now = Instant.now();
-        Instant dueIn4Hours = now.plus(4, ChronoUnit.HOURS);
+        ZoneId zone = ZoneId.of("Asia/Kolkata");
+        // Anchor to 10:00 AM local time in user's timezone to deterministically test same-day deadline
+        ZonedDateTime userMorning = ZonedDateTime.now(zone).withHour(10).withMinute(0).withSecond(0).withNano(0);
+        Instant now = userMorning.toInstant();
+        Instant dueIn4Hours = userMorning.plusHours(4).toInstant();
 
         ScoringEngine.TriageScores scores = scoringEngine.calculateScores(
                 thread,

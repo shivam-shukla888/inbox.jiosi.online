@@ -44,7 +44,12 @@ class GroqClientTests {
         restClientBuilder = RestClient.builder();
         mockServer = MockRestServiceServer.bindTo(restClientBuilder).build();
 
-        groqClient = new DefaultGroqClient(properties, restClientBuilder, objectMapper);
+        RestClient restClient = restClientBuilder
+                .baseUrl(properties.getBaseUrl())
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+
+        groqClient = new DefaultGroqClient(properties, restClient, objectMapper);
     }
 
     @Test
@@ -141,6 +146,126 @@ class GroqClientTests {
                 .isInstanceOf(GroqClient.GroqUnavailableException.class)
                 .hasMessageContaining("temporarily unavailable");
         mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("chatCompletion 4xx client error fails immediately without retrying")
+    void testChatCompletion4xxFailsImmediatelyWithoutRetry() {
+        // Only 1 request expected because 4xx client errors are non-transient
+        mockServer.expect(requestTo("https://api.groq.com/openai/v1/chat/completions"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST).body("{\"error\":\"invalid_request_payload\"}"));
+
+        GroqChatRequest request = GroqChatRequest.jsonRequest(
+                "llama-3.3-70b-versatile",
+                List.of(new GroqChatRequest.Message("user", "Summarize email")),
+                0.1,
+                500
+        );
+
+        assertThatThrownBy(() -> groqClient.chatCompletion(request))
+                .isInstanceOf(GroqClient.GroqApiException.class)
+                .hasMessageContaining("client error status: 400");
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("chatCompletion 5xx transient error retries and succeeds on next attempt")
+    void testChatCompletion5xxRetriesAndSucceeds() {
+        String mockResponseBody = """
+                {
+                  "id": "chatcmpl-retry-success",
+                  "model": "llama-3.3-70b-versatile",
+                  "choices": [
+                    {
+                      "index": 0,
+                      "message": {
+                        "role": "assistant",
+                        "content": "{\\"gist\\": \\"Recovered from transient error.\\"}"
+                      },
+                      "finish_reason": "stop"
+                    }
+                  ],
+                  "usage": { "prompt_tokens": 50, "completion_tokens": 10, "total_tokens": 60 }
+                }
+                """;
+
+        mockServer.expect(requestTo("https://api.groq.com/openai/v1/chat/completions"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withStatus(HttpStatus.BAD_GATEWAY).body("Bad Gateway"));
+
+        mockServer.expect(requestTo("https://api.groq.com/openai/v1/chat/completions"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess(mockResponseBody, MediaType.APPLICATION_JSON));
+
+        GroqChatRequest request = GroqChatRequest.jsonRequest(
+                "llama-3.3-70b-versatile",
+                List.of(new GroqChatRequest.Message("user", "Summarize email")),
+                0.1,
+                500
+        );
+
+        GroqChatResponse response = groqClient.chatCompletion(request);
+        assertThat(response).isNotNull();
+        assertThat(response.firstChoiceContent()).contains("Recovered from transient error.");
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("chatCompletion handles socket timeout cleanly and reports safe error")
+    void testChatCompletionTimeout() {
+        mockServer.expect(requestTo("https://api.groq.com/openai/v1/chat/completions"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(request -> {
+                    throw new org.springframework.web.client.ResourceAccessException(
+                            "Read timed out",
+                            new java.net.SocketTimeoutException("Read timed out")
+                    );
+                });
+
+        mockServer.expect(requestTo("https://api.groq.com/openai/v1/chat/completions"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(request -> {
+                    throw new org.springframework.web.client.ResourceAccessException(
+                            "Read timed out",
+                            new java.net.SocketTimeoutException("Read timed out")
+                    );
+                });
+
+        GroqChatRequest request = GroqChatRequest.jsonRequest(
+                "llama-3.3-70b-versatile",
+                List.of(new GroqChatRequest.Message("user", "Summarize email")),
+                0.1,
+                500
+        );
+
+        assertThatThrownBy(() -> groqClient.chatCompletion(request))
+                .isInstanceOf(GroqClient.GroqUnavailableException.class)
+                .hasMessageContaining("timed out or connection was refused");
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("chatCompletion preserves thread interrupted flag when interrupted")
+    void testChatCompletionPreservesInterruptedFlag() {
+        Thread.currentThread().interrupt();
+
+        GroqChatRequest request = GroqChatRequest.jsonRequest(
+                "llama-3.3-70b-versatile",
+                List.of(new GroqChatRequest.Message("user", "Summarize email")),
+                0.1,
+                500
+        );
+
+        try {
+            assertThatThrownBy(() -> groqClient.chatCompletion(request))
+                    .isInstanceOf(GroqClient.GroqApiException.class)
+                    .hasMessageContaining("interrupted");
+            assertThat(Thread.currentThread().isInterrupted()).isTrue();
+        } finally {
+            // Clean up thread interrupt flag for subsequent tests
+            Thread.interrupted();
+        }
     }
 
     @Test

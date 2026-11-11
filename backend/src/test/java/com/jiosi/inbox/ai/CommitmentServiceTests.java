@@ -52,6 +52,9 @@ class CommitmentServiceTests {
     @Mock
     private WorkspaceAuthorizationService workspaceAuthService;
 
+    @Mock
+    private com.jiosi.inbox.ai.repository.UserAiPreferencesRepository preferencesRepository;
+
     private GroqProperties groqProperties;
     private PromptInjectionGuard promptGuard;
     private EvidenceValidator evidenceValidator;
@@ -84,7 +87,8 @@ class CommitmentServiceTests {
                 threadRepository,
                 emailRepository,
                 workspaceAuthService,
-                objectMapper
+                objectMapper,
+                preferencesRepository
         );
 
         workspaceId = UUID.randomUUID();
@@ -192,5 +196,26 @@ class CommitmentServiceTests {
 
         assertThat(updated.effectiveStatus()).isEqualTo("done");
         assertThat(updated.auditNote()).isEqualTo("Client confirmed palette receipt");
+    }
+
+    @Test
+    @DisplayName("extractAndSyncCommitments throws AiConsentRequiredException and never calls Groq when consent is false")
+    void testExtractCommitmentsBlockedWhenAiConsentRevoked() {
+        com.jiosi.inbox.ai.entity.UserAiPreferences preferences = new com.jiosi.inbox.ai.entity.UserAiPreferences(
+                testUser.getId(),
+                false, // consent is OFF
+                "professional",
+                "match_thread"
+        );
+        when(preferencesRepository.findByUserId(testUser.getId())).thenReturn(Optional.of(preferences));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                service.extractAndSyncCommitments(threadId, workspaceId, testUser)
+        ).isInstanceOf(com.jiosi.inbox.ai.service.EmailIntelligenceService.AiConsentRequiredException.class)
+         .hasMessageContaining("AI processing consent is disabled in your privacy settings");
+
+        // Verify Groq was NEVER called and no external network request occurred
+        verify(groqClient, never()).chatCompletion(any());
+        verify(threadRepository, never()).findByIdAndWorkspaceId(any(), any());
     }
 }

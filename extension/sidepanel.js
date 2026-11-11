@@ -1,13 +1,21 @@
 // JIOSI Inbox — Chrome Side Panel Companion Script
 // Connects to JIOSI Backend API with workspace context and zero local secrets
 
-(function () {
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory();
+  } else {
+    factory();
+  }
+})(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
   // Config State
-  let backendUrl = 'http://localhost:8080';
+  const DEFAULT_BACKEND_URL = 'https://jiosi-inbox-api.onrender.com';
+  let backendUrl = DEFAULT_BACKEND_URL;
   let workspaceId = '';
   let activeProfile = 'generic';
+  let sessionAuthToken = null;
 
   // Active View State
   let currentThreadId = null;
@@ -28,6 +36,7 @@
 
   // Config fields
   const backendUrlInput = document.getElementById('backendUrl');
+  const sessionTokenInput = document.getElementById('sessionToken');
   const workspaceIdInput = document.getElementById('workspaceId');
   const profileSelect = document.getElementById('profileSelect');
   const saveConfigBtn = document.getElementById('saveConfigBtn');
@@ -86,6 +95,45 @@
   const toast = document.getElementById('toast');
 
   // -------------------------------------------------------------
+  // URL VALIDATION & HELPERS
+  // -------------------------------------------------------------
+  function validateBackendUrl(rawUrl) {
+    if (!rawUrl || typeof rawUrl !== 'string') {
+      throw new Error('Backend URL cannot be empty.');
+    }
+    const trimmed = rawUrl.trim().replace(/\/+$/, '');
+    let parsed;
+    try {
+      parsed = new URL(trimmed);
+    } catch (e) {
+      throw new Error('Invalid URL format for Backend API.');
+    }
+
+    // Reject embedded user/password credentials
+    if (parsed.username || parsed.password) {
+      throw new Error('Backend URL must not contain embedded username or password credentials.');
+    }
+
+    // Reject unsafe schemes
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      throw new Error('Unsafe protocol: only HTTPS (or HTTP for localhost) is permitted.');
+    }
+
+    // Require HTTPS in production; allow HTTP only for localhost/127.0.0.1
+    const isLocal = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+    if (parsed.protocol === 'http:' && !isLocal) {
+      throw new Error('HTTPS is required for production backend URLs. HTTP is only permitted on localhost.');
+    }
+
+    // Reject empty host
+    if (!parsed.hostname || parsed.hostname.length < 3) {
+      throw new Error('Invalid host in Backend URL.');
+    }
+
+    return trimmed;
+  }
+
+  // -------------------------------------------------------------
   // INITIALIZATION & CONFIG
   // -------------------------------------------------------------
   function init() {
@@ -98,39 +146,104 @@
   }
 
   function loadStoredConfig(callback) {
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get(['jiosiBackendUrl', 'jiosiWorkspaceId', 'jiosiProfile'], (res) => {
-        if (res.jiosiBackendUrl) backendUrl = res.jiosiBackendUrl;
-        if (res.jiosiWorkspaceId) workspaceId = res.jiosiWorkspaceId;
-        if (res.jiosiProfile) activeProfile = res.jiosiProfile;
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      if (chrome.storage.local) {
+        chrome.storage.local.get(['jiosiBackendUrl', 'jiosiWorkspaceId', 'jiosiProfile'], (res) => {
+          if (res && res.jiosiBackendUrl) {
+            try {
+              backendUrl = validateBackendUrl(res.jiosiBackendUrl);
+            } catch (e) {
+              backendUrl = DEFAULT_BACKEND_URL;
+            }
+          } else {
+            backendUrl = DEFAULT_BACKEND_URL;
+          }
+          if (res && res.jiosiWorkspaceId) workspaceId = res.jiosiWorkspaceId;
+          if (res && res.jiosiProfile) activeProfile = res.jiosiProfile;
 
-        backendUrlInput.value = backendUrl;
-        workspaceIdInput.value = workspaceId;
-        profileSelect.value = activeProfile;
-        updateProfileBadge();
+          if (backendUrlInput) backendUrlInput.value = backendUrl;
+          if (workspaceIdInput) workspaceIdInput.value = workspaceId;
+          if (profileSelect) profileSelect.value = activeProfile;
+          updateProfileBadge();
+
+          // Ensure any legacy plaintext tokens are purged from local storage
+          chrome.storage.local.remove(['jiosiSessionToken', 'authToken', 'token']);
+        });
+      }
+
+      // Load session token strictly from in-memory session storage (never from local storage)
+      if (chrome.storage.session) {
+        chrome.storage.session.get(['jiosiSessionToken'], (res) => {
+          if (res && res.jiosiSessionToken) {
+            sessionAuthToken = res.jiosiSessionToken;
+            if (sessionTokenInput) sessionTokenInput.value = sessionAuthToken;
+          }
+          if (callback) callback();
+        });
+      } else {
         if (callback) callback();
-      });
+      }
     } else {
       if (callback) callback();
     }
   }
 
   function saveConfig() {
-    backendUrl = backendUrlInput.value.trim().replace(/\/+$/, '');
-    workspaceId = workspaceIdInput.value.trim();
-    activeProfile = profileSelect.value;
+    let validatedUrl;
+    try {
+      validatedUrl = validateBackendUrl(backendUrlInput ? backendUrlInput.value : '');
+    } catch (err) {
+      showToast('Error: ' + err.message);
+      return;
+    }
 
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.set({
-        jiosiBackendUrl: backendUrl,
-        jiosiWorkspaceId: workspaceId,
-        jiosiProfile: activeProfile
-      }, () => {
-        showToast('Settings saved successfully');
-        settingsPanel.classList.add('hidden');
+    backendUrl = validatedUrl;
+    if (backendUrlInput) backendUrlInput.value = backendUrl;
+    workspaceId = workspaceIdInput ? workspaceIdInput.value.trim() : '';
+    activeProfile = profileSelect ? profileSelect.value : 'generic';
+    const tokenVal = sessionTokenInput ? sessionTokenInput.value.trim() : '';
+
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      if (chrome.storage.local) {
+        chrome.storage.local.set({
+          jiosiBackendUrl: backendUrl,
+          jiosiWorkspaceId: workspaceId,
+          jiosiProfile: activeProfile
+        }, () => {
+          // Never persist session tokens in plaintext local storage
+          chrome.storage.local.remove(['jiosiSessionToken', 'authToken', 'token']);
+        });
+      }
+
+      if (chrome.storage.session) {
+        sessionAuthToken = tokenVal || null;
+        if (sessionAuthToken) {
+          chrome.storage.session.set({ jiosiSessionToken: sessionAuthToken }, () => {
+            showToast('Settings saved (session token stored in-memory)');
+            if (settingsPanel) settingsPanel.classList.add('hidden');
+            updateProfileBadge();
+            checkBackendHealth();
+          });
+        } else {
+          chrome.storage.session.remove(['jiosiSessionToken'], () => {
+            showToast('Settings saved');
+            if (settingsPanel) settingsPanel.classList.add('hidden');
+            updateProfileBadge();
+            checkBackendHealth();
+          });
+        }
+      } else {
+        sessionAuthToken = tokenVal || null;
+        showToast('Settings saved');
+        if (settingsPanel) settingsPanel.classList.add('hidden');
         updateProfileBadge();
         checkBackendHealth();
-      });
+      }
+    } else {
+      sessionAuthToken = tokenVal || null;
+      showToast('Settings saved');
+      if (settingsPanel) settingsPanel.classList.add('hidden');
+      updateProfileBadge();
     }
   }
 
@@ -143,10 +256,11 @@
       professional_services: 'Pro Services',
       small_saas: 'Small SaaS'
     };
-    profileBadge.textContent = labels[activeProfile] || 'Small Business';
+    if (profileBadge) profileBadge.textContent = labels[activeProfile] || 'Small Business';
   }
 
   function showToast(message) {
+    if (!toast) return;
     toast.textContent = message;
     toast.classList.remove('hidden');
     setTimeout(() => {
@@ -162,6 +276,7 @@
     const headers = {
       'Content-Type': 'application/json',
       ...(workspaceId ? { 'X-Workspace-Id': workspaceId } : {}),
+      ...(sessionAuthToken ? { 'Authorization': `Bearer ${sessionAuthToken}` } : {}),
       ...(options.headers || {})
     };
 
@@ -174,7 +289,12 @@
 
       if (response.status === 401) {
         setConnectionState(false, 'Unauthorized');
-        throw new Error('Authentication required. Please sign in to JIOSI Inbox.');
+        throw new Error('Authentication required. Please sign in to JIOSI Inbox or update your Companion Session Token in settings.');
+      }
+
+      if (response.status === 403) {
+        setConnectionState(false, 'Forbidden');
+        throw new Error('Access denied to workspace. Please check your Workspace ID in settings.');
       }
 
       const json = await response.json();
@@ -658,7 +778,13 @@
     }
   }
 
-  // Start
-  init();
-})();
+  // Start if in extension sidepanel DOM
+  if (typeof window !== 'undefined' && typeof document !== 'undefined' && document.getElementById('tabThread')) {
+    init();
+  }
+
+  return {
+    validateBackendUrl
+  };
+});
 
